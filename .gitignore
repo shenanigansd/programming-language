@@ -6,3 +6,7 @@ target
 
 # CMake
 cmake-build-debug
+
+# Python
+__pycache__
+*.egg-info

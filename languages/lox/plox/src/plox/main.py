@@ -9,7 +9,7 @@ HAD_ERROR = False
 
 def report(line: int, where: str, message: str) -> None:
     global HAD_ERROR
-    print("[line " + line + "] Error" + where + ": " + message)
+    print(f"[line {line}] Error {where}: {message}")
     HAD_ERROR = True
 
 

@@ -1,0 +1,15 @@
+[package]
+name = "codegen"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+syntax = { path = "../syntax" }
+
+cranelift = { version = "0.125.4", default-features = false, features = [
+    "std",
+    "frontend",
+    "module",
+    "native",
+    "object",
+] }

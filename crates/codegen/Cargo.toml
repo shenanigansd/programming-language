@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 syntax = { path = "../syntax" }
 
-cranelift = { version = "0.126.1", default-features = false, features = [
+cranelift = { version = "0.128.1", default-features = false, features = [
     "std",
     "frontend",
     "module",

@@ -1,19 +1,23 @@
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "monthly"
+      interval: monthly
     groups:
       ci-dependencies:
         patterns:
           - "*"
+    cooldown:
+      default-days: 7
 
-  - package-ecosystem: "cargo"
-    directory: "/"
+  - package-ecosystem: cargo
+    directory: /
     schedule:
-      interval: "monthly"
+      interval: monthly
     groups:
       rust-dependencies:
         patterns:
           - "*"
+    cooldown:
+      default-days: 7

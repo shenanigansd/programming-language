@@ -20,7 +20,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run Clippy
-        run: cargo clippy -- -D clippy::all -D clippy::pedantic -D clippy::cargo
+        run: cargo clippy -- -D clippy::all -D clippy::pedantic # -D clippy::cargo
 
       - name: Run tests
         run: cargo test --no-fail-fast

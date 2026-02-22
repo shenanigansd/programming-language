@@ -197,7 +197,10 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_expression(&mut self, expression: &Spanned<Expression>) -> Result<Value, RuntimeError> {
+    fn evaluate_expression(
+        &mut self,
+        expression: &Spanned<Expression>,
+    ) -> Result<Value, RuntimeError> {
         match &expression.value {
             Expression::Integer(value) => Ok(Value::Integer(*value)),
 
@@ -236,7 +239,9 @@ impl Interpreter {
         }
 
         let Some(function) = self.functions.get(name).cloned() else {
-            return Err(RuntimeError::new(format!("Undefined function: {name}")).with_span(call_span));
+            return Err(
+                RuntimeError::new(format!("Undefined function: {name}")).with_span(call_span)
+            );
         };
 
         match function {
@@ -275,8 +280,12 @@ fn evaluate_binary(
 ) -> Result<Value, RuntimeError> {
     match (operator, left, right) {
         (BinaryOperator::Add, Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a + b)),
-        (BinaryOperator::Subtract, Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a - b)),
-        (BinaryOperator::Multiply, Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a * b)),
+        (BinaryOperator::Subtract, Value::Integer(a), Value::Integer(b)) => {
+            Ok(Value::Integer(a - b))
+        }
+        (BinaryOperator::Multiply, Value::Integer(a), Value::Integer(b)) => {
+            Ok(Value::Integer(a * b))
+        }
         (BinaryOperator::Divide, Value::Integer(a), Value::Integer(b)) => {
             if b == 0 {
                 Err(RuntimeError::new("Division by zero.").with_span(span))
@@ -286,9 +295,13 @@ fn evaluate_binary(
         }
 
         // Convenience: string concatenation for "+"
-        (BinaryOperator::Add, Value::String(a), Value::String(b)) => Ok(Value::String(format!("{a}{b}"))),
+        (BinaryOperator::Add, Value::String(a), Value::String(b)) => {
+            Ok(Value::String(format!("{a}{b}")))
+        }
 
-        (op, a, b) => Err(RuntimeError::new(format!("Unsupported operation: {a:?} {op} {b:?}")).with_span(span)),
+        (op, a, b) => Err(
+            RuntimeError::new(format!("Unsupported operation: {a:?} {op} {b:?}")).with_span(span),
+        ),
     }
 }
 

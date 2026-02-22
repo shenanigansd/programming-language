@@ -1,6 +1,6 @@
 use amarok_syntax::{BinaryOperator, Expression, Program, Span, Spanned, Statement};
-use pest::iterators::Pair;
 use pest::Parser;
+use pest::iterators::Pair;
 use pest_derive::Parser;
 mod error;
 pub use error::ParseError;
@@ -11,8 +11,8 @@ struct AmarokGrammar;
 
 /// Parse a full Amarok program (multiple statements).
 pub fn parse_program(source: &str) -> Result<Program, ParseError> {
-    let mut pairs = AmarokGrammar::parse(Rule::program, source)
-        .map_err(pest_error_to_parse_error)?;
+    let mut pairs =
+        AmarokGrammar::parse(Rule::program, source).map_err(pest_error_to_parse_error)?;
 
     let program_pair = pairs
         .next()
@@ -23,8 +23,8 @@ pub fn parse_program(source: &str) -> Result<Program, ParseError> {
 
 /// Parse a single statement (useful for REPL later).
 pub fn parse_statement(source: &str) -> Result<Spanned<Statement>, ParseError> {
-    let mut pairs = AmarokGrammar::parse(Rule::statement, source)
-        .map_err(pest_error_to_parse_error)?;
+    let mut pairs =
+        AmarokGrammar::parse(Rule::statement, source).map_err(pest_error_to_parse_error)?;
 
     let statement_pair = pairs
         .next()
@@ -35,8 +35,8 @@ pub fn parse_statement(source: &str) -> Result<Spanned<Statement>, ParseError> {
 
 /// Parse a single expression (useful for unit tests and REPL experiments).
 pub fn parse_expression(source: &str) -> Result<Spanned<Expression>, ParseError> {
-    let mut pairs = AmarokGrammar::parse(Rule::expression, source)
-        .map_err(pest_error_to_parse_error)?;
+    let mut pairs =
+        AmarokGrammar::parse(Rule::expression, source).map_err(pest_error_to_parse_error)?;
 
     let expression_pair = pairs
         .next()
@@ -253,11 +253,9 @@ fn build_expression(pair: Pair<Rule>) -> Result<Spanned<Expression>, String> {
     match pair.as_rule() {
         Rule::expression => build_expression(expect_single_inner(pair, "expression")?),
 
-        Rule::addition => build_left_associative_binary(
-            pair,
-            Rule::add_operator,
-            operator_from_add_text,
-        ),
+        Rule::addition => {
+            build_left_associative_binary(pair, Rule::add_operator, operator_from_add_text)
+        }
 
         Rule::multiplication => build_left_associative_binary(
             pair,
@@ -459,10 +457,7 @@ fn pest_error_to_parse_error(error: pest::error::Error<Rule>) -> ParseError {
         InputLocation::Pos(pos) => Some(Span::new(pos, pos + 1)),
     };
 
-    ParseError {
-        message,
-        span,
-    }
+    ParseError { message, span }
 }
 
 fn unquote_string(text: &str) -> Result<String, String> {
@@ -496,4 +491,3 @@ fn unquote_string(text: &str) -> Result<String, String> {
 
     Ok(result)
 }
-

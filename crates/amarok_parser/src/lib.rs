@@ -10,39 +10,39 @@ pub use error::ParseError;
 struct AmarokGrammar;
 
 /// Parse a full Amarok program (multiple statements).
-pub fn parse_program(source: &str) -> Result<Program, String> {
+pub fn parse_program(source: &str) -> Result<Program, ParseError> {
     let mut pairs = AmarokGrammar::parse(Rule::program, source)
-        .map_err(|error| error.to_string())?;
+        .map_err(pest_error_to_parse_error)?;
 
     let program_pair = pairs
         .next()
-        .ok_or_else(|| "Expected a program, found nothing.".to_string())?;
+        .ok_or_else(|| ParseError::new("Expected a program, found nothing."))?;
 
-    build_program(program_pair)
+    build_program(program_pair).map_err(ParseError::new)
 }
 
 /// Parse a single statement (useful for REPL later).
-pub fn parse_statement(source: &str) -> Result<Spanned<Statement>, String> {
+pub fn parse_statement(source: &str) -> Result<Spanned<Statement>, ParseError> {
     let mut pairs = AmarokGrammar::parse(Rule::statement, source)
-        .map_err(|error| error.to_string())?;
+        .map_err(pest_error_to_parse_error)?;
 
     let statement_pair = pairs
         .next()
-        .ok_or_else(|| "Expected a statement, found nothing.".to_string())?;
+        .ok_or_else(|| ParseError::new("Expected a statement, found nothing."))?;
 
-    build_statement(statement_pair)
+    build_statement(statement_pair).map_err(ParseError::new)
 }
 
 /// Parse a single expression (useful for unit tests and REPL experiments).
-pub fn parse_expression(source: &str) -> Result<Spanned<Expression>, String> {
+pub fn parse_expression(source: &str) -> Result<Spanned<Expression>, ParseError> {
     let mut pairs = AmarokGrammar::parse(Rule::expression, source)
-        .map_err(|error| error.to_string())?;
+        .map_err(pest_error_to_parse_error)?;
 
     let expression_pair = pairs
         .next()
-        .ok_or_else(|| "Expected an expression, found nothing.".to_string())?;
+        .ok_or_else(|| ParseError::new("Expected an expression, found nothing."))?;
 
-    build_expression(expression_pair)
+    build_expression(expression_pair).map_err(ParseError::new)
 }
 
 fn build_program(pair: Pair<Rule>) -> Result<Program, String> {
@@ -447,6 +447,22 @@ fn expect_single_inner<'input>(
         return Err(format!("{context} had more than one inner element."));
     }
     Ok(first)
+}
+
+fn pest_error_to_parse_error(error: pest::error::Error<Rule>) -> ParseError {
+    use pest::error::InputLocation;
+
+    let message = error.to_string();
+
+    let span = match error.location {
+        InputLocation::Span((start, end)) => Some(Span::new(start, end)),
+        InputLocation::Pos(pos) => Some(Span::new(pos, pos + 1)),
+    };
+
+    ParseError {
+        message,
+        span,
+    }
 }
 
 fn unquote_string(text: &str) -> Result<String, String> {

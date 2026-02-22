@@ -1,0 +1,50 @@
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
+
+program   = { SOI ~ statement* ~ EOI }
+
+statement = _{
+      assignment_statement
+    | return_statement
+    | if_statement
+    | while_statement
+    | function_definition
+    | block_statement
+    | expression_statement
+}
+
+assignment_statement = { identifier ~ "=" ~ expression ~ ";" }
+expression_statement = { expression ~ ";" }
+
+block_statement = { "{" ~ statement* ~ "}" }
+
+if_statement = { "if" ~ "(" ~ expression ~ ")" ~ block_statement ~ else_clause? }
+else_clause  = { "else" ~ block_statement }
+
+while_statement = { "while" ~ "(" ~ expression ~ ")" ~ block_statement }
+
+function_definition = { "def" ~ identifier ~ "(" ~ parameter_list? ~ ")" ~ block_statement }
+parameter_list = { identifier ~ ("," ~ identifier)* }
+
+return_statement = { "return" ~ expression? ~ ";" }
+
+expression  =  { addition }
+
+addition    =  { multiplication ~ (add_operator ~ multiplication)* }
+add_operator = { "+" | "-" }
+
+multiplication = { primary ~ (multiply_operator ~ primary)* }
+multiply_operator = { "*" | "/" }
+
+primary     =  { function_call | variable | integer | string | parenthesized }
+parenthesized = { "(" ~ expression ~ ")" }
+
+function_call = { identifier ~ "(" ~ argument_list? ~ ")" }
+argument_list = { expression ~ ("," ~ expression)* }
+
+variable    =  { identifier }
+
+identifier  = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+integer     = @{ ASCII_DIGIT+ }
+
+string      = @{ "\"" ~ ( "\\\"" | !("\"") ~ ANY )* ~ "\"" }

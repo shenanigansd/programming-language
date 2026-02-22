@@ -1,0 +1,9 @@
+[package]
+name = "amarok_parser"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+amarok_syntax = { path = "../amarok_syntax" }
+pest = "2"
+pest_derive = "2"

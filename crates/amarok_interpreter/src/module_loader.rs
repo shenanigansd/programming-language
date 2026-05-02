@@ -71,7 +71,9 @@ impl ModuleLoader {
             .with_span(use_span)
         })?;
 
-        let file_id = self.source_map.add_file(canonical.to_path_buf(), source.clone());
+        let file_id = self
+            .source_map
+            .add_file(canonical.to_path_buf(), source.clone());
 
         amarok_parser::parse_program_with_file_id(&source, file_id).map_err(|diagnostic| {
             let span = diagnostic.span.unwrap_or(use_span);

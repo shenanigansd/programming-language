@@ -47,9 +47,9 @@ pub(crate) fn call_function(
         0 => Err(Diagnostic::new("Empty function path.").with_span(call_span)),
         1 => call_unqualified(interp, &path[0], arguments, call_span),
         2 => call_qualified(interp, &path[0], &path[1], arguments, call_span),
-        _ => Err(
-            Diagnostic::new(format!("Unknown path: {}", path.join("::"))).with_span(call_span),
-        ),
+        _ => {
+            Err(Diagnostic::new(format!("Unknown path: {}", path.join("::"))).with_span(call_span))
+        }
     }
 }
 

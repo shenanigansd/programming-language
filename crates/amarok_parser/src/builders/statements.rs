@@ -23,9 +23,9 @@ pub(crate) fn build_assignment_statement(pair: Pair<Rule>) -> Result<Statement, 
     }
     let name = name_pair.as_str().to_string();
 
-    let expression_pair = inner.find(|p| p.as_rule() == Rule::expression).ok_or_else(|| {
-        Diagnostic::new("Assignment missing expression.").with_span(outer_span)
-    })?;
+    let expression_pair = inner
+        .find(|p| p.as_rule() == Rule::expression)
+        .ok_or_else(|| Diagnostic::new("Assignment missing expression.").with_span(outer_span))?;
 
     let value = build_expression(expression_pair)?;
 
@@ -58,16 +58,16 @@ pub(crate) fn build_if_statement(pair: Pair<Rule>) -> Result<Statement, Diagnost
     let outer_span = span_of(&pair);
     let mut inner = pair.into_inner();
 
-    let condition_pair = inner.find(|p| p.as_rule() == Rule::expression).ok_or_else(|| {
-        Diagnostic::new("If statement missing condition expression.").with_span(outer_span)
-    })?;
+    let condition_pair = inner
+        .find(|p| p.as_rule() == Rule::expression)
+        .ok_or_else(|| {
+            Diagnostic::new("If statement missing condition expression.").with_span(outer_span)
+        })?;
     let condition = build_expression(condition_pair)?;
 
     let then_block_pair = inner
         .find(|p| p.as_rule() == Rule::block_statement)
-        .ok_or_else(|| {
-            Diagnostic::new("If statement missing then block.").with_span(outer_span)
-        })?;
+        .ok_or_else(|| Diagnostic::new("If statement missing then block.").with_span(outer_span))?;
     let then_branch = extract_block_statements(then_block_pair)?;
 
     let mut else_branch: Vec<Spanned<Statement>> = Vec::new();
@@ -89,9 +89,7 @@ fn extract_else_clause(pair: Pair<Rule>) -> Result<Vec<Spanned<Statement>>, Diag
     extract_block_statements(find_child(pair, Rule::block_statement, "Else clause")?)
 }
 
-fn extract_block_statements(
-    block_pair: Pair<Rule>,
-) -> Result<Vec<Spanned<Statement>>, Diagnostic> {
+fn extract_block_statements(block_pair: Pair<Rule>) -> Result<Vec<Spanned<Statement>>, Diagnostic> {
     // block_statement = { "{" ~ statement* ~ "}" }
     let mut statements = Vec::new();
     for item in block_pair.into_inner() {
@@ -105,9 +103,11 @@ pub(crate) fn build_while_statement(pair: Pair<Rule>) -> Result<Statement, Diagn
     let outer_span = span_of(&pair);
     let mut inner = pair.into_inner();
 
-    let condition_pair = inner.find(|p| p.as_rule() == Rule::expression).ok_or_else(|| {
-        Diagnostic::new("While statement missing condition expression.").with_span(outer_span)
-    })?;
+    let condition_pair = inner
+        .find(|p| p.as_rule() == Rule::expression)
+        .ok_or_else(|| {
+            Diagnostic::new("While statement missing condition expression.").with_span(outer_span)
+        })?;
     let condition = build_expression(condition_pair)?;
 
     let body_block_pair = inner
@@ -125,9 +125,11 @@ pub(crate) fn build_function_definition(pair: Pair<Rule>) -> Result<Statement, D
     let outer_span = span_of(&pair);
     let mut inner = pair.into_inner();
 
-    let name_pair = inner.find(|p| p.as_rule() == Rule::identifier).ok_or_else(|| {
-        Diagnostic::new("Function definition missing name.").with_span(outer_span)
-    })?;
+    let name_pair = inner
+        .find(|p| p.as_rule() == Rule::identifier)
+        .ok_or_else(|| {
+            Diagnostic::new("Function definition missing name.").with_span(outer_span)
+        })?;
     let name = name_pair.as_str().to_string();
 
     let mut parameters: Vec<String> = Vec::new();

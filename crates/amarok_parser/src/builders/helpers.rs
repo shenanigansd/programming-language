@@ -19,8 +19,7 @@ pub(crate) fn expect_single_inner<'input>(
     })?;
     if inner.next().is_some() {
         return Err(
-            Diagnostic::new(format!("{context} had more than one inner element."))
-                .with_span(span),
+            Diagnostic::new(format!("{context} had more than one inner element.")).with_span(span),
         );
     }
     Ok(first)
@@ -79,9 +78,9 @@ pub(crate) fn unquote_string(text: &str, span: Span) -> Result<String, Diagnosti
     let mut chars = content.chars();
     while let Some(character) = chars.next() {
         if character == '\\' {
-            let next = chars.next().ok_or_else(|| {
-                Diagnostic::new("String ends with a backslash.").with_span(span)
-            })?;
+            let next = chars
+                .next()
+                .ok_or_else(|| Diagnostic::new("String ends with a backslash.").with_span(span))?;
             match next {
                 '"' => result.push('"'),
                 '\\' => result.push('\\'),

@@ -27,7 +27,11 @@ pub(crate) fn build_expression(pair: Pair<Rule>) -> Result<Spanned<Expression>, 
 
         Rule::parenthesized => {
             // parenthesized = { "(" ~ expression ~ ")" }
-            build_expression(find_child(pair, Rule::expression, "Parenthesized expression")?)
+            build_expression(find_child(
+                pair,
+                Rule::expression,
+                "Parenthesized expression",
+            )?)
         }
 
         Rule::function_call => build_function_call(pair),

@@ -14,11 +14,9 @@
 //! - `control_flow` — control-flow signal returned by statement execution
 //! - `function` — user-defined function representation and builtin signature
 //! - `scope` — lexical scope stack
-//! - `core_lib` — registration of items in the `core::` namespace
 //! - `std_lib` — registration of items in the `std::` namespace
 
 mod control_flow;
-mod core_lib;
 mod function;
 mod interpreter;
 mod module_loader;

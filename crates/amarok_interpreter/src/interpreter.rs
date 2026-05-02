@@ -6,7 +6,6 @@ use amarok_syntax::{
 };
 
 use crate::control_flow::ControlFlow;
-use crate::core_lib;
 use crate::function::{BuiltinFunction, Function};
 use crate::module_loader::{ModuleExports, ModuleLoader};
 use crate::scope::ScopeStack;
@@ -22,22 +21,19 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-    /// Constructs an interpreter with both `core::` and `std::` registered.
+    /// Constructs an interpreter with `std::` registered.
     #[must_use]
     pub fn new() -> Self {
         let mut interpreter = Self::empty();
-        core_lib::register(&mut interpreter);
         std_lib::register(&mut interpreter);
         interpreter
     }
 
-    /// Constructs an interpreter with only `core::` registered. Calls into
+    /// Constructs an interpreter with no namespaces registered. Calls into
     /// `std::` will fail with an `Unknown path` diagnostic at runtime.
     #[must_use]
     pub fn new_no_std() -> Self {
-        let mut interpreter = Self::empty();
-        core_lib::register(&mut interpreter);
-        interpreter
+        Self::empty()
     }
 
     fn empty() -> Self {
@@ -99,10 +95,6 @@ impl Interpreter {
             .entry(namespace.to_string())
             .or_default()
             .insert(name.to_string(), function);
-    }
-
-    pub(crate) fn ensure_namespace(&mut self, namespace: &str) {
-        self.namespaces.entry(namespace.to_string()).or_default();
     }
 
     pub(crate) fn push_output(&mut self, line: String) {

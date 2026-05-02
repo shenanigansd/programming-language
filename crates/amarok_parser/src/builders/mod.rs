@@ -1,4 +1,4 @@
-use amarok_syntax::{Program, Spanned, Statement};
+use amarok_syntax::{Diagnostic, Program, Spanned, Statement};
 use pest::iterators::Pair;
 
 use crate::grammar::Rule;
@@ -16,9 +16,12 @@ use statements::{
     build_while_statement,
 };
 
-pub(crate) fn build_program(pair: Pair<Rule>) -> Result<Program, String> {
+pub(crate) fn build_program(pair: Pair<Rule>) -> Result<Program, Diagnostic> {
     if pair.as_rule() != Rule::program {
-        return Err(format!("Expected program rule, got {:?}", pair.as_rule()));
+        return Err(
+            Diagnostic::new(format!("Expected program rule, got {:?}", pair.as_rule()))
+                .with_span(span_of(&pair)),
+        );
     }
 
     let mut statements: Vec<Spanned<Statement>> = Vec::new();
@@ -44,7 +47,7 @@ pub(crate) fn build_program(pair: Pair<Rule>) -> Result<Program, String> {
     Ok(Program { statements })
 }
 
-pub(crate) fn build_statement(pair: Pair<Rule>) -> Result<Spanned<Statement>, String> {
+pub(crate) fn build_statement(pair: Pair<Rule>) -> Result<Spanned<Statement>, Diagnostic> {
     let statement_span = span_of(&pair);
 
     let statement_value = match pair.as_rule() {
@@ -56,7 +59,12 @@ pub(crate) fn build_statement(pair: Pair<Rule>) -> Result<Spanned<Statement>, St
         Rule::function_definition => build_function_definition(pair)?,
         Rule::return_statement => build_return_statement(pair)?,
         Rule::use_statement => build_use_statement(pair)?,
-        other => return Err(format!("Unhandled statement rule: {other:?}")),
+        other => {
+            return Err(
+                Diagnostic::new(format!("Unhandled statement rule: {other:?}"))
+                    .with_span(statement_span),
+            );
+        }
     };
 
     Ok(Spanned::new(statement_span, statement_value))

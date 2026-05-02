@@ -32,7 +32,7 @@ pub fn parse_program(source: &str) -> Result<Program, Diagnostic> {
         .next()
         .ok_or_else(|| Diagnostic::new("Expected a program, found nothing."))?;
 
-    build_program(program_pair).map_err(Diagnostic::new)
+    build_program(program_pair)
 }
 
 /// Parse a full Amarok program and stamp every span with the given [`FileId`].
@@ -65,7 +65,7 @@ pub fn parse_statement(source: &str) -> Result<Spanned<Statement>, Diagnostic> {
         .next()
         .ok_or_else(|| Diagnostic::new("Expected a statement, found nothing."))?;
 
-    build_statement(statement_pair).map_err(Diagnostic::new)
+    build_statement(statement_pair)
 }
 
 /// Parse a single expression (useful for unit tests and REPL experiments).
@@ -81,7 +81,7 @@ pub fn parse_expression(source: &str) -> Result<Spanned<Expression>, Diagnostic>
         .next()
         .ok_or_else(|| Diagnostic::new("Expected an expression, found nothing."))?;
 
-    build_expression(expression_pair).map_err(Diagnostic::new)
+    build_expression(expression_pair)
 }
 
 // --- span rewriting -------------------------------------------------------

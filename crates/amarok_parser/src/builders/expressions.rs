@@ -1,4 +1,4 @@
-use amarok_syntax::{BinaryOperator, Expression, Spanned};
+use amarok_syntax::{BinaryOperator, Diagnostic, Expression, Spanned};
 use pest::iterators::Pair;
 
 use crate::grammar::Rule;
@@ -7,7 +7,7 @@ use super::helpers::{
     collect_path_segments, expect_single_inner, find_child, span_of, unquote_string,
 };
 
-pub(crate) fn build_expression(pair: Pair<Rule>) -> Result<Spanned<Expression>, String> {
+pub(crate) fn build_expression(pair: Pair<Rule>) -> Result<Spanned<Expression>, Diagnostic> {
     let expression_span = span_of(&pair);
 
     match pair.as_rule() {
@@ -35,10 +35,11 @@ pub(crate) fn build_expression(pair: Pair<Rule>) -> Result<Spanned<Expression>, 
         Rule::variable => {
             let inner = expect_single_inner(pair, "variable")?;
             if inner.as_rule() != Rule::identifier {
-                return Err(format!(
+                return Err(Diagnostic::new(format!(
                     "Expected identifier inside variable, got {:?}",
                     inner.as_rule()
-                ));
+                ))
+                .with_span(span_of(&inner)));
             }
             Ok(Spanned::new(
                 expression_span,
@@ -48,15 +49,16 @@ pub(crate) fn build_expression(pair: Pair<Rule>) -> Result<Spanned<Expression>, 
 
         Rule::integer => {
             let text = pair.as_str();
-            let value: i64 = text
-                .parse()
-                .map_err(|_| format!("Invalid integer literal: {text}"))?;
+            let value: i64 = text.parse().map_err(|_| {
+                Diagnostic::new(format!("Invalid integer literal: {text}"))
+                    .with_span(expression_span)
+            })?;
             Ok(Spanned::new(expression_span, Expression::Integer(value)))
         }
 
         Rule::string => Ok(Spanned::new(
             expression_span,
-            Expression::String(unquote_string(pair.as_str())?),
+            Expression::String(unquote_string(pair.as_str(), expression_span)?),
         )),
 
         Rule::identifier => Ok(Spanned::new(
@@ -64,11 +66,14 @@ pub(crate) fn build_expression(pair: Pair<Rule>) -> Result<Spanned<Expression>, 
             Expression::Variable(pair.as_str().to_string()),
         )),
 
-        other => Err(format!("Unhandled rule in build_expression: {other:?}")),
+        other => Err(
+            Diagnostic::new(format!("Unhandled rule in build_expression: {other:?}"))
+                .with_span(expression_span),
+        ),
     }
 }
 
-fn build_function_call(pair: Pair<Rule>) -> Result<Spanned<Expression>, String> {
+fn build_function_call(pair: Pair<Rule>) -> Result<Spanned<Expression>, Diagnostic> {
     // function_call = { path ~ "(" ~ argument_list? ~ ")" }
     let call_span = span_of(&pair);
 
@@ -76,13 +81,14 @@ fn build_function_call(pair: Pair<Rule>) -> Result<Spanned<Expression>, String> 
 
     let path_pair = inner
         .next()
-        .ok_or_else(|| "Function call missing path.".to_string())?;
+        .ok_or_else(|| Diagnostic::new("Function call missing path.").with_span(call_span))?;
 
     if path_pair.as_rule() != Rule::path {
-        return Err(format!(
+        return Err(Diagnostic::new(format!(
             "Function call expected path, got {:?}",
             path_pair.as_rule()
-        ));
+        ))
+        .with_span(span_of(&path_pair)));
     }
 
     let path = collect_path_segments(path_pair, "Function call")?;
@@ -100,7 +106,7 @@ fn build_function_call(pair: Pair<Rule>) -> Result<Spanned<Expression>, String> 
     ))
 }
 
-fn build_argument_list(pair: Pair<Rule>) -> Result<Vec<Spanned<Expression>>, String> {
+fn build_argument_list(pair: Pair<Rule>) -> Result<Vec<Spanned<Expression>>, Diagnostic> {
     // argument_list = { expression ~ ("," ~ expression)* }
     let mut arguments: Vec<Spanned<Expression>> = Vec::new();
 
@@ -117,7 +123,7 @@ fn build_left_associative_binary(
     pair: Pair<Rule>,
     expected_operator_rule: Rule,
     operator_from_text: fn(&str) -> Result<BinaryOperator, String>,
-) -> Result<Spanned<Expression>, String> {
+) -> Result<Spanned<Expression>, Diagnostic> {
     // addition = { multiplication ~ (add_operator ~ multiplication)* }
     // multiplication = { primary ~ (multiply_operator ~ primary)* }
     //
@@ -125,31 +131,32 @@ fn build_left_associative_binary(
     let full_span = span_of(&pair);
     let mut inner = pair.into_inner();
 
-    let first_operand_pair = inner
-        .next()
-        .ok_or_else(|| "Expected left operand, found nothing.".to_string())?;
+    let first_operand_pair = inner.next().ok_or_else(|| {
+        Diagnostic::new("Expected left operand, found nothing.").with_span(full_span)
+    })?;
 
     let mut expression = build_expression(first_operand_pair)?;
 
     while let Some(operator_pair) = inner.next() {
         if operator_pair.as_rule() != expected_operator_rule {
-            return Err(format!(
+            return Err(Diagnostic::new(format!(
                 "Expected operator rule {:?}, got {:?}",
                 expected_operator_rule,
                 operator_pair.as_rule()
-            ));
+            ))
+            .with_span(span_of(&operator_pair)));
         }
 
-        let operator = operator_from_text(operator_pair.as_str())?;
+        let operator_span = span_of(&operator_pair);
+        let operator = operator_from_text(operator_pair.as_str())
+            .map_err(|message| Diagnostic::new(message).with_span(operator_span))?;
 
-        let right_operand_pair = inner
-            .next()
-            .ok_or_else(|| "Expected right operand after operator.".to_string())?;
+        let right_operand_pair = inner.next().ok_or_else(|| {
+            Diagnostic::new("Expected right operand after operator.").with_span(operator_span)
+        })?;
 
         let right_expression = build_expression(right_operand_pair)?;
 
-        // For spans, we use the full chain span (simple and stable).
-        // If you want “tight” spans later, we can merge left.start to right.end.
         expression = Spanned::new(
             full_span,
             Expression::Binary {

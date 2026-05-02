@@ -10,9 +10,13 @@ pub use error::ParseError;
 struct AmarokGrammar;
 
 /// Parse a full Amarok program (multiple statements).
+///
+/// # Errors
+///
+/// Returns an error if the source is not valid Amarok syntax for a full program.
 pub fn parse_program(source: &str) -> Result<Program, ParseError> {
     let mut pairs =
-        AmarokGrammar::parse(Rule::program, source).map_err(pest_error_to_parse_error)?;
+        AmarokGrammar::parse(Rule::program, source).map_err(|error: pest::error::Error<Rule>| pest_error_to_parse_error(&error))?;
 
     let program_pair = pairs
         .next()
@@ -22,9 +26,13 @@ pub fn parse_program(source: &str) -> Result<Program, ParseError> {
 }
 
 /// Parse a single statement (useful for REPL later).
+///
+/// # Errors
+///
+/// Returns an error if the source is not valid Amarok syntax for a single statement.
 pub fn parse_statement(source: &str) -> Result<Spanned<Statement>, ParseError> {
     let mut pairs =
-        AmarokGrammar::parse(Rule::statement, source).map_err(pest_error_to_parse_error)?;
+        AmarokGrammar::parse(Rule::statement, source).map_err(|error: pest::error::Error<Rule>| pest_error_to_parse_error(&error))?;
 
     let statement_pair = pairs
         .next()
@@ -34,9 +42,13 @@ pub fn parse_statement(source: &str) -> Result<Spanned<Statement>, ParseError> {
 }
 
 /// Parse a single expression (useful for unit tests and REPL experiments).
+///
+/// # Errors
+///
+/// Returns an error if the source is not valid Amarok syntax for a single expression.
 pub fn parse_expression(source: &str) -> Result<Spanned<Expression>, ParseError> {
     let mut pairs =
-        AmarokGrammar::parse(Rule::expression, source).map_err(pest_error_to_parse_error)?;
+        AmarokGrammar::parse(Rule::expression, source).map_err(|error: pest::error::Error<Rule>| pest_error_to_parse_error(&error))?;
 
     let expression_pair = pairs
         .next()
@@ -375,11 +387,7 @@ fn build_left_associative_binary(
 
     let mut expression = build_expression(first_operand_pair)?;
 
-    loop {
-        let operator_pair = match inner.next() {
-            Some(p) => p,
-            None => break,
-        };
+    while let Some(operator_pair) = inner.next() {
 
         if operator_pair.as_rule() != expected_operator_rule {
             return Err(format!(
@@ -447,7 +455,7 @@ fn expect_single_inner<'input>(
     Ok(first)
 }
 
-fn pest_error_to_parse_error(error: pest::error::Error<Rule>) -> ParseError {
+fn pest_error_to_parse_error(error: &pest::error::Error<Rule>) -> ParseError {
     use pest::error::InputLocation;
 
     let message = error.to_string();

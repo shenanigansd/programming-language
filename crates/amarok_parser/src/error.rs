@@ -14,6 +14,7 @@ impl ParseError {
         }
     }
 
+    #[must_use]
     pub fn with_span(mut self, span: Span) -> Self {
         self.span = Some(span);
         self

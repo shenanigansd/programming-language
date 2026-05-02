@@ -15,6 +15,7 @@ pub struct RuntimeError {
 }
 
 impl RuntimeError {
+    #[must_use]
     pub fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
@@ -22,6 +23,7 @@ impl RuntimeError {
         }
     }
 
+    #[must_use]
     pub fn with_span(mut self, span: Span) -> Self {
         self.span = Some(span);
         self
@@ -34,7 +36,7 @@ enum ControlFlow {
     Return(Value),
 }
 
-type BuiltinFunction = fn(&mut Interpreter, Vec<Value>, Span) -> Result<Value, RuntimeError>;
+type BuiltinFunction = fn(&mut Interpreter, Vec<Value>, Span) -> Value;
 
 #[derive(Clone)]
 enum Function {
@@ -52,6 +54,7 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
+    #[must_use]
     pub fn new() -> Self {
         let mut interpreter = Self {
             scopes: vec![HashMap::new()],
@@ -64,10 +67,17 @@ impl Interpreter {
         interpreter
     }
 
+    #[must_use]
     pub fn output_lines(&self) -> &[String] {
         &self.output
     }
 
+    /// Executes a parsed program from start to finish.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if runtime evaluation fails, such as undefined names,
+    /// invalid operations, or a `return` used outside of a function.
     pub fn run_program(&mut self, program: &Program) -> Result<(), RuntimeError> {
         match self.execute_statement_list(&program.statements)? {
             ControlFlow::Continue => Ok(()),
@@ -235,7 +245,7 @@ impl Interpreter {
         call_span: Span,
     ) -> Result<Value, RuntimeError> {
         if let Some(builtin) = self.builtins.get(name).copied() {
-            return builtin(self, arguments, call_span);
+            return Ok(builtin(self, arguments, call_span));
         }
 
         let Some(function) = self.functions.get(name).cloned() else {
@@ -256,7 +266,7 @@ impl Interpreter {
                 }
 
                 self.enter_scope();
-                for (parameter, argument_value) in parameters.iter().zip(arguments.into_iter()) {
+                for (parameter, argument_value) in parameters.iter().zip(arguments) {
                     self.assign_variable(parameter, argument_value);
                 }
 
@@ -269,6 +279,12 @@ impl Interpreter {
                 }
             }
         }
+    }
+}
+
+impl Default for Interpreter {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -317,13 +333,13 @@ fn builtin_print(
     interpreter: &mut Interpreter,
     arguments: Vec<Value>,
     _call_span: Span,
-) -> Result<Value, RuntimeError> {
+) -> Value {
     let mut pieces = Vec::new();
     for value in arguments {
         pieces.push(format_value(&value));
     }
     interpreter.output.push(pieces.join(" "));
-    Ok(Value::Null)
+    Value::Null
 }
 
 fn format_value(value: &Value) -> String {

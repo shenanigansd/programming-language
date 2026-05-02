@@ -5,10 +5,12 @@ pub struct Span {
 }
 
 impl Span {
+    #[must_use]
     pub fn new(start: usize, end: usize) -> Self {
         Self { start, end }
     }
 
+    #[must_use]
     pub fn zero() -> Self {
         Self { start: 0, end: 0 }
     }

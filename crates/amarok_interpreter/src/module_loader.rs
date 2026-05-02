@@ -7,7 +7,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use amarok_syntax::SourceMap;
+use amarok_syntax::{Diagnostic, Program, SourceMap, Span};
 
 use crate::function::Function;
 use crate::value::Value;
@@ -26,10 +26,10 @@ pub(crate) struct ModuleExports {
 /// for cycle detection.
 #[derive(Debug, Default)]
 pub(crate) struct ModuleLoader {
-    pub(crate) roots: Vec<PathBuf>,
-    pub(crate) cache: HashMap<PathBuf, ModuleExports>,
-    pub(crate) loading: HashSet<PathBuf>,
-    pub(crate) source_map: SourceMap,
+    roots: Vec<PathBuf>,
+    cache: HashMap<PathBuf, ModuleExports>,
+    loading: HashSet<PathBuf>,
+    source_map: SourceMap,
 }
 
 impl ModuleLoader {
@@ -37,11 +37,74 @@ impl ModuleLoader {
         Self::default()
     }
 
-    /// Resolve `a::b::c` to the first `<root>/a/b/c.amarok` that exists.
-    ///
-    /// Returns the canonicalized path on success, or a list of attempted
-    /// paths on failure (the caller turns this into a [`Diagnostic`]).
-    pub(crate) fn resolve(&self, segments: &[String]) -> Result<PathBuf, Vec<PathBuf>> {
+    /// Resolve `a::b::c` to a canonical path or return a span-attached
+    /// `Module not found` diagnostic listing every path that was tried.
+    pub(crate) fn resolve_or_diag(
+        &self,
+        segments: &[String],
+        use_span: Span,
+    ) -> Result<PathBuf, Diagnostic> {
+        self.resolve(segments).map_err(|tried| {
+            Diagnostic::new(format!(
+                "Module not found: {}\nTried:\n{}",
+                segments.join("::"),
+                Self::format_tried_paths(&tried),
+            ))
+            .with_span(use_span)
+        })
+    }
+
+    /// Read the file at `canonical`, register it with the source map, and
+    /// parse it into a [`Program`]. All failure modes are wrapped in a
+    /// span-attached [`Diagnostic`] for the caller to bubble up.
+    pub(crate) fn read_and_parse(
+        &mut self,
+        canonical: &Path,
+        use_span: Span,
+    ) -> Result<Program, Diagnostic> {
+        let source = std::fs::read_to_string(canonical).map_err(|error| {
+            Diagnostic::new(format!(
+                "Failed to read module {}: {}",
+                canonical.display(),
+                error
+            ))
+            .with_span(use_span)
+        })?;
+
+        let file_id = self.source_map.add_file(canonical.to_path_buf(), source.clone());
+
+        amarok_parser::parse_program_with_file_id(&source, file_id).map_err(|diagnostic| {
+            let span = diagnostic.span.unwrap_or(use_span);
+            Diagnostic::new(format!(
+                "Failed to parse module {}: {}",
+                canonical.display(),
+                diagnostic.message
+            ))
+            .with_span(span)
+        })
+    }
+
+    pub(crate) fn cache_get(&self, path: &Path) -> Option<ModuleExports> {
+        self.cache.get(path).cloned()
+    }
+
+    pub(crate) fn cache_insert(&mut self, path: PathBuf, exports: ModuleExports) {
+        self.cache.insert(path, exports);
+    }
+
+    pub(crate) fn is_loading(&self, path: &Path) -> bool {
+        self.loading.contains(path)
+    }
+
+    pub(crate) fn begin_loading(&mut self, path: PathBuf) {
+        self.loading.insert(path);
+    }
+
+    pub(crate) fn end_loading(&mut self, path: &Path) {
+        self.loading.remove(path);
+    }
+
+    fn resolve(&self, segments: &[String]) -> Result<PathBuf, Vec<PathBuf>> {
         let mut tried: Vec<PathBuf> = Vec::new();
 
         let mut relative = PathBuf::new();
@@ -77,7 +140,7 @@ impl ModuleLoader {
     }
 
     /// Format a list of attempted paths for diagnostic output.
-    pub(crate) fn format_tried_paths(tried: &[PathBuf]) -> String {
+    fn format_tried_paths(tried: &[PathBuf]) -> String {
         if tried.is_empty() {
             "(no module roots configured)".to_string()
         } else {

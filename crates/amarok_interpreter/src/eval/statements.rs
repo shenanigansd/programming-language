@@ -2,6 +2,7 @@ use amarok_syntax::{Diagnostic, Spanned, Statement};
 
 use crate::control_flow::ControlFlow;
 use crate::eval::expressions::evaluate_expression;
+use crate::eval::modules::load_and_merge;
 use crate::function::Function;
 use crate::interpreter::Interpreter;
 use crate::value::{Value, is_truthy};
@@ -95,7 +96,7 @@ pub(crate) fn execute_statement(
         }
 
         Statement::Use { path } => {
-            interp.load_and_merge_module(path, statement.span)?;
+            load_and_merge(interp, path, statement.span)?;
             Ok(ControlFlow::Continue)
         }
     }

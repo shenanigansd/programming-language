@@ -39,7 +39,8 @@ multiply_operator = { "*" | "/" }
 primary     =  { function_call | variable | integer | string | parenthesized }
 parenthesized = { "(" ~ expression ~ ")" }
 
-function_call = { identifier ~ "(" ~ argument_list? ~ ")" }
+function_call = { path ~ "(" ~ argument_list? ~ ")" }
+path = { identifier ~ ("::" ~ identifier)* }
 argument_list = { expression ~ ("," ~ expression)* }
 
 variable    =  { identifier }

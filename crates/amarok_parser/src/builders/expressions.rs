@@ -71,23 +71,36 @@ pub(crate) fn build_expression(pair: Pair<Rule>) -> Result<Spanned<Expression>, 
 }
 
 fn build_function_call(pair: Pair<Rule>) -> Result<Spanned<Expression>, String> {
-    // function_call = { identifier ~ "(" ~ argument_list? ~ ")" }
+    // function_call = { path ~ "(" ~ argument_list? ~ ")" }
     let call_span = span_of(&pair);
 
     let mut inner = pair.into_inner();
 
-    let name_pair = inner
+    let path_pair = inner
         .next()
-        .ok_or_else(|| "Function call missing name.".to_string())?;
+        .ok_or_else(|| "Function call missing path.".to_string())?;
 
-    if name_pair.as_rule() != Rule::identifier {
+    if path_pair.as_rule() != Rule::path {
         return Err(format!(
-            "Function call expected identifier, got {:?}",
-            name_pair.as_rule()
+            "Function call expected path, got {:?}",
+            path_pair.as_rule()
         ));
     }
 
-    let name = name_pair.as_str().to_string();
+    let mut path: Vec<String> = Vec::new();
+    for segment in path_pair.into_inner() {
+        if segment.as_rule() != Rule::identifier {
+            return Err(format!(
+                "Path expected identifier, got {:?}",
+                segment.as_rule()
+            ));
+        }
+        path.push(segment.as_str().to_string());
+    }
+
+    if path.is_empty() {
+        return Err("Function call path was empty.".to_string());
+    }
 
     let mut arguments: Vec<Spanned<Expression>> = Vec::new();
     for item in inner {
@@ -98,7 +111,7 @@ fn build_function_call(pair: Pair<Rule>) -> Result<Spanned<Expression>, String> 
 
     Ok(Spanned::new(
         call_span,
-        Expression::FunctionCall { name, arguments },
+        Expression::FunctionCall { path, arguments },
     ))
 }
 

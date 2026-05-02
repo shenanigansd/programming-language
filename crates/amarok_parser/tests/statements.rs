@@ -39,7 +39,7 @@ fn parses_expression_statement_function_call() {
         program.statements[0].value,
         Statement::Expression {
             expression: Expression::FunctionCall {
-                name: "print".to_string(),
+                path: vec!["print".to_string()],
                 arguments: vec![Expression::Integer(123).into()],
             }
             .into(),

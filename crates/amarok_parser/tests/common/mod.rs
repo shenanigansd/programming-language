@@ -13,8 +13,8 @@ pub fn strip_spans_expression(expression: &Spanned<Expression>) -> Expression {
         Expression::String(value) => Expression::String(value.clone()),
         Expression::Variable(name) => Expression::Variable(name.clone()),
 
-        Expression::FunctionCall { name, arguments } => Expression::FunctionCall {
-            name: name.clone(),
+        Expression::FunctionCall { path, arguments } => Expression::FunctionCall {
+            path: path.clone(),
             arguments: arguments
                 .iter()
                 .map(strip_spans_expression)

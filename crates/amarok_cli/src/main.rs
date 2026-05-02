@@ -2,6 +2,8 @@ use amarok_syntax::Diagnostic;
 use std::env;
 use std::fs;
 
+const USAGE: &str = "Usage: amarok_cli [--no-std] <path-to-file.amarok>";
+
 fn main() {
     if let Err(message) = run() {
         eprintln!("{message}");
@@ -12,12 +14,32 @@ fn main() {
 fn run() -> Result<(), String> {
     let mut arguments = env::args().skip(1);
 
-    let Some(path) = arguments.next() else {
-        return Err("Usage: amarok_cli <path-to-file.amarok>".to_string());
+    let mut no_std = false;
+    let mut path: Option<String> = None;
+
+    for argument in arguments.by_ref() {
+        match argument.as_str() {
+            "--no-std" => no_std = true,
+            "--" => {
+                path = arguments.next();
+                break;
+            }
+            other if other.starts_with("--") => {
+                return Err(format!("Unknown option: {other}\n{USAGE}"));
+            }
+            _ => {
+                path = Some(argument);
+                break;
+            }
+        }
+    }
+
+    let Some(path) = path else {
+        return Err(format!("Missing source file.\n{USAGE}"));
     };
 
     if arguments.next().is_some() {
-        return Err("Too many arguments. Usage: amarok_cli <path-to-file.amarok>".to_string());
+        return Err(format!("Too many arguments.\n{USAGE}"));
     }
 
     let source = fs::read_to_string(&path)
@@ -33,7 +55,11 @@ fn run() -> Result<(), String> {
         }
     };
 
-    let mut interpreter = amarok_interpreter::Interpreter::new();
+    let mut interpreter = if no_std {
+        amarok_interpreter::Interpreter::new_no_std()
+    } else {
+        amarok_interpreter::Interpreter::new()
+    };
 
     let result = interpreter.run_program(&program);
 

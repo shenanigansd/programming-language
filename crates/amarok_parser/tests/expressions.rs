@@ -29,7 +29,7 @@ fn parses_function_call_no_arguments() {
     assert_eq!(
         strip_spans_expression(&expression),
         Expression::FunctionCall {
-            name: "tick".to_string(),
+            path: vec!["tick".to_string()],
             arguments: vec![],
         }
     );
@@ -42,11 +42,40 @@ fn parses_function_call_with_arguments() {
     assert_eq!(
         strip_spans_expression(&expression),
         Expression::FunctionCall {
-            name: "print".to_string(),
+            path: vec!["print".to_string()],
             arguments: vec![
                 Expression::Integer(1).into(),
                 Expression::Variable("x".to_string()).into(),
             ],
+        }
+    );
+}
+
+#[test]
+fn parses_qualified_function_call() {
+    let expression = parse_expression("std::print(1, 2)").expect("Expression should parse");
+
+    assert_eq!(
+        strip_spans_expression(&expression),
+        Expression::FunctionCall {
+            path: vec!["std".to_string(), "print".to_string()],
+            arguments: vec![
+                Expression::Integer(1).into(),
+                Expression::Integer(2).into(),
+            ],
+        }
+    );
+}
+
+#[test]
+fn parses_three_segment_path_call() {
+    let expression = parse_expression("a::b::c(x)").expect("Expression should parse");
+
+    assert_eq!(
+        strip_spans_expression(&expression),
+        Expression::FunctionCall {
+            path: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+            arguments: vec![Expression::Variable("x".to_string()).into()],
         }
     );
 }

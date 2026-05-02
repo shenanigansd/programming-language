@@ -56,7 +56,7 @@ pub enum Expression {
         right: Box<Spanned<Expression>>,
     },
     FunctionCall {
-        name: String,
+        path: Vec<String>,
         arguments: Vec<Spanned<Expression>>,
     },
 }

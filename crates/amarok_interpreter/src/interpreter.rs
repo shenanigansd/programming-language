@@ -2,31 +2,46 @@ use std::collections::HashMap;
 
 use amarok_syntax::{BinaryOperator, Diagnostic, Expression, Program, Span, Spanned, Statement};
 
-use crate::builtins::register_builtins;
 use crate::control_flow::ControlFlow;
+use crate::core_lib;
 use crate::function::{BuiltinFunction, Function};
 use crate::scope::ScopeStack;
+use crate::std_lib;
 use crate::value::{Value, is_truthy};
 
 pub struct Interpreter {
     scopes: ScopeStack,
     functions: HashMap<String, Function>,
-    builtins: HashMap<String, BuiltinFunction>,
+    namespaces: HashMap<String, HashMap<String, BuiltinFunction>>,
     output: Vec<String>,
 }
 
 impl Interpreter {
+    /// Constructs an interpreter with both `core::` and `std::` registered.
     #[must_use]
     pub fn new() -> Self {
-        let mut interpreter = Self {
+        let mut interpreter = Self::empty();
+        core_lib::register(&mut interpreter);
+        std_lib::register(&mut interpreter);
+        interpreter
+    }
+
+    /// Constructs an interpreter with only `core::` registered. Calls into
+    /// `std::` will fail with an `Unknown path` diagnostic at runtime.
+    #[must_use]
+    pub fn new_no_std() -> Self {
+        let mut interpreter = Self::empty();
+        core_lib::register(&mut interpreter);
+        interpreter
+    }
+
+    fn empty() -> Self {
+        Self {
             scopes: ScopeStack::new(),
             functions: HashMap::new(),
-            builtins: HashMap::new(),
+            namespaces: HashMap::new(),
             output: Vec::new(),
-        };
-
-        register_builtins(&mut interpreter);
-        interpreter
+        }
     }
 
     #[must_use]
@@ -47,10 +62,22 @@ impl Interpreter {
         }
     }
 
-    // --- internal accessors used by builtins ---
+    // --- internal accessors used by namespace registration modules ---
 
-    pub(crate) fn builtins_mut(&mut self) -> &mut HashMap<String, BuiltinFunction> {
-        &mut self.builtins
+    pub(crate) fn register_builtin(
+        &mut self,
+        namespace: &str,
+        name: &str,
+        function: BuiltinFunction,
+    ) {
+        self.namespaces
+            .entry(namespace.to_string())
+            .or_default()
+            .insert(name.to_string(), function);
+    }
+
+    pub(crate) fn ensure_namespace(&mut self, namespace: &str) {
+        self.namespaces.entry(namespace.to_string()).or_default();
     }
 
     pub(crate) fn push_output(&mut self, line: String) {
@@ -170,26 +197,60 @@ impl Interpreter {
                 evaluate_binary(*operator, left_value, right_value, expression.span)
             }
 
-            Expression::FunctionCall { name, arguments } => {
+            Expression::FunctionCall { path, arguments } => {
                 let mut evaluated_arguments = Vec::with_capacity(arguments.len());
                 for argument in arguments {
                     evaluated_arguments.push(self.evaluate_expression(argument)?);
                 }
-                self.call_function(name, evaluated_arguments, expression.span)
+                self.call_function(path, evaluated_arguments, expression.span)
             }
         }
     }
 
     fn call_function(
         &mut self,
+        path: &[String],
+        arguments: Vec<Value>,
+        call_span: Span,
+    ) -> Result<Value, Diagnostic> {
+        match path.len() {
+            0 => Err(Diagnostic::new("Empty function path.").with_span(call_span)),
+            1 => self.call_unqualified(&path[0], arguments, call_span),
+            2 => self.call_qualified(&path[0], &path[1], arguments, call_span),
+            _ => Err(
+                Diagnostic::new(format!("Unknown path: {}", path.join("::")))
+                    .with_span(call_span),
+            ),
+        }
+    }
+
+    fn call_qualified(
+        &mut self,
+        namespace: &str,
         name: &str,
         arguments: Vec<Value>,
         call_span: Span,
     ) -> Result<Value, Diagnostic> {
-        if let Some(builtin) = self.builtins.get(name).copied() {
-            return Ok(builtin(self, arguments, call_span));
-        }
+        let Some(builtin) = self
+            .namespaces
+            .get(namespace)
+            .and_then(|items| items.get(name).copied())
+        else {
+            return Err(
+                Diagnostic::new(format!("Unknown path: {namespace}::{name}"))
+                    .with_span(call_span),
+            );
+        };
 
+        Ok(builtin(self, arguments, call_span))
+    }
+
+    fn call_unqualified(
+        &mut self,
+        name: &str,
+        arguments: Vec<Value>,
+        call_span: Span,
+    ) -> Result<Value, Diagnostic> {
         let Some(function) = self.functions.get(name).cloned() else {
             return Err(Diagnostic::new(format!("Undefined function: {name}")).with_span(call_span));
         };

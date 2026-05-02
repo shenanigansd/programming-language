@@ -1,0 +1,2 @@
+use a;
+def from_b() { return 2; }

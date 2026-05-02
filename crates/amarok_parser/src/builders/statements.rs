@@ -162,3 +162,28 @@ pub(crate) fn build_return_statement(pair: Pair<Rule>) -> Result<Statement, Stri
 
     Ok(Statement::Return { value })
 }
+
+pub(crate) fn build_use_statement(pair: Pair<Rule>) -> Result<Statement, String> {
+    // use_statement = { "use" ~ path ~ ";" }
+    let path_pair = pair
+        .into_inner()
+        .find(|p| p.as_rule() == Rule::path)
+        .ok_or_else(|| "Use statement missing module path.".to_string())?;
+
+    let mut path: Vec<String> = Vec::new();
+    for segment in path_pair.into_inner() {
+        if segment.as_rule() != Rule::identifier {
+            return Err(format!(
+                "Use path expected identifier, got {:?}",
+                segment.as_rule()
+            ));
+        }
+        path.push(segment.as_str().to_string());
+    }
+
+    if path.is_empty() {
+        return Err("Use statement path was empty.".to_string());
+    }
+
+    Ok(Statement::Use { path })
+}

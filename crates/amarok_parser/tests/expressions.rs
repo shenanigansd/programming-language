@@ -59,10 +59,7 @@ fn parses_qualified_function_call() {
         strip_spans_expression(&expression),
         Expression::FunctionCall {
             path: vec!["std".to_string(), "print".to_string()],
-            arguments: vec![
-                Expression::Integer(1).into(),
-                Expression::Integer(2).into(),
-            ],
+            arguments: vec![Expression::Integer(1).into(), Expression::Integer(2).into(),],
         }
     );
 }

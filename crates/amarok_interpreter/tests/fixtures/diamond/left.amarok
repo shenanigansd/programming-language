@@ -1,0 +1,5 @@
+use shared;
+
+def left() {
+    return shared_value();
+}

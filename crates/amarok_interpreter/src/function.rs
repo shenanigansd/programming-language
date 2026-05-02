@@ -6,7 +6,7 @@ use amarok_syntax::Span;
 
 pub(crate) type BuiltinFunction = fn(&mut Interpreter, Vec<Value>, Span) -> Value;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) enum Function {
     UserDefined {
         parameters: Vec<String>,

@@ -4,7 +4,8 @@ COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 program   = { SOI ~ statement* ~ EOI }
 
 statement = _{
-      assignment_statement
+      use_statement
+    | assignment_statement
     | return_statement
     | if_statement
     | while_statement
@@ -15,6 +16,7 @@ statement = _{
 
 assignment_statement = { identifier ~ "=" ~ expression ~ ";" }
 expression_statement = { expression ~ ";" }
+use_statement = { "use" ~ path ~ ";" }
 
 block_statement = { "{" ~ statement* ~ "}" }
 

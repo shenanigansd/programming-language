@@ -1,0 +1,9 @@
+# Amarok-defined helpers in the `std::io` module.
+#
+# Thin wrappers around the builtin `std::print`. The qualified builtin call
+# (`std::print(...)`) coexists with this module: `use std::io;` injects the
+# unqualified name `println` without affecting the builtin.
+
+def println(value) {
+    std::print(value);
+}

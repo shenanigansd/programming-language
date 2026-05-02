@@ -1,18 +1,38 @@
+use crate::source_map::FileId;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
+    pub file_id: FileId,
 }
 
 impl Span {
     #[must_use]
     pub fn new(start: usize, end: usize) -> Self {
-        Self { start, end }
+        Self {
+            start,
+            end,
+            file_id: FileId::DUMMY,
+        }
+    }
+
+    #[must_use]
+    pub fn with_file(start: usize, end: usize, file_id: FileId) -> Self {
+        Self {
+            start,
+            end,
+            file_id,
+        }
     }
 
     #[must_use]
     pub fn zero() -> Self {
-        Self { start: 0, end: 0 }
+        Self {
+            start: 0,
+            end: 0,
+            file_id: FileId::DUMMY,
+        }
     }
 }
 

@@ -132,3 +132,44 @@ fn parses_function_definition_and_return() {
     let value = value.as_ref().expect("Return should have an expression");
     assert!(matches!(value.value, Expression::Binary { .. }));
 }
+
+#[test]
+fn parses_single_segment_use() {
+    let program = parse_program("use foo;").expect("Program should parse");
+    let program = strip_spans_program(&program);
+
+    assert_eq!(
+        program,
+        Program {
+            statements: vec![
+                Statement::Use {
+                    path: vec!["foo".to_string()],
+                }
+                .into(),
+            ],
+        }
+    );
+}
+
+#[test]
+fn parses_multi_segment_use() {
+    let program = parse_program("use std::math;").expect("Program should parse");
+    let program = strip_spans_program(&program);
+
+    assert_eq!(
+        program,
+        Program {
+            statements: vec![
+                Statement::Use {
+                    path: vec!["std".to_string(), "math".to_string()],
+                }
+                .into(),
+            ],
+        }
+    );
+}
+
+#[test]
+fn use_without_semicolon_fails() {
+    assert!(parse_program("use foo").is_err());
+}

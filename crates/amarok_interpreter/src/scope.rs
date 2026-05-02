@@ -46,4 +46,17 @@ impl ScopeStack {
         }
         Err(Diagnostic::new(format!("Undefined variable: {name}")).with_span(span))
     }
+
+    /// Clone all bindings from the outermost (module top-level) scope.
+    pub(crate) fn outermost_clone(&self) -> HashMap<String, Value> {
+        self.scopes.first().cloned().unwrap_or_default()
+    }
+
+    /// Insert a binding directly into the outermost scope (used when merging
+    /// imported module top-level variables).
+    pub(crate) fn set_outermost(&mut self, name: &str, value: Value) {
+        if let Some(scope) = self.scopes.first_mut() {
+            scope.insert(name.to_string(), value);
+        }
+    }
 }

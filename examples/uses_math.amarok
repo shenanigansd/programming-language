@@ -1,0 +1,10 @@
+# Demonstrates `use` importing Amarok-defined modules from the stdlib.
+use std::math;
+use std::io;
+
+x = add(2, 3);
+y = square(4);
+
+println(x);
+println(y);
+println(mul(x, y));

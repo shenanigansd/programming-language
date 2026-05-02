@@ -101,6 +101,8 @@ pub fn strip_spans_statement(statement: &Spanned<Statement>) -> Statement {
                 .map(strip_spans_expression)
                 .map(Spanned::from),
         },
+
+        Statement::Use { path } => Statement::Use { path: path.clone() },
     }
 }
 

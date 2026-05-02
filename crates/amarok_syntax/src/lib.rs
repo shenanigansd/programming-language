@@ -5,8 +5,10 @@
 
 use std::fmt;
 mod diagnostic;
+mod source_map;
 mod span;
 pub use diagnostic::Diagnostic;
+pub use source_map::{FileId, SourceFile, SourceMap};
 pub use span::{Span, Spanned};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -42,6 +44,11 @@ pub enum Statement {
     },
     Return {
         value: Option<Spanned<Expression>>,
+    },
+    /// `use a::b::c;` — load module file `a/b/c.amarok` and flat-merge its
+    /// top-level functions and variables into the current scope.
+    Use {
+        path: Vec<String>,
     },
 }
 

@@ -21,6 +21,7 @@ mod control_flow;
 mod core_lib;
 mod function;
 mod interpreter;
+mod module_loader;
 mod scope;
 mod std_lib;
 mod value;

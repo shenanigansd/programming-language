@@ -329,11 +329,7 @@ fn is_truthy(value: &Value) -> bool {
     }
 }
 
-fn builtin_print(
-    interpreter: &mut Interpreter,
-    arguments: Vec<Value>,
-    _call_span: Span,
-) -> Value {
+fn builtin_print(interpreter: &mut Interpreter, arguments: Vec<Value>, _call_span: Span) -> Value {
     let mut pieces = Vec::new();
     for value in arguments {
         pieces.push(format_value(&value));

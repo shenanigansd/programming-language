@@ -3,7 +3,9 @@ use pest::iterators::Pair;
 
 use crate::grammar::Rule;
 
-use super::helpers::{expect_single_inner, span_of, unquote_string};
+use super::helpers::{
+    collect_path_segments, expect_single_inner, find_child, span_of, unquote_string,
+};
 
 pub(crate) fn build_expression(pair: Pair<Rule>) -> Result<Spanned<Expression>, String> {
     let expression_span = span_of(&pair);
@@ -25,11 +27,7 @@ pub(crate) fn build_expression(pair: Pair<Rule>) -> Result<Spanned<Expression>, 
 
         Rule::parenthesized => {
             // parenthesized = { "(" ~ expression ~ ")" }
-            let inner_expression_pair = pair
-                .into_inner()
-                .find(|p| p.as_rule() == Rule::expression)
-                .ok_or_else(|| "Parenthesized expression missing inner expression.".to_string())?;
-            build_expression(inner_expression_pair)
+            build_expression(find_child(pair, Rule::expression, "Parenthesized expression")?)
         }
 
         Rule::function_call => build_function_call(pair),
@@ -87,20 +85,7 @@ fn build_function_call(pair: Pair<Rule>) -> Result<Spanned<Expression>, String> 
         ));
     }
 
-    let mut path: Vec<String> = Vec::new();
-    for segment in path_pair.into_inner() {
-        if segment.as_rule() != Rule::identifier {
-            return Err(format!(
-                "Path expected identifier, got {:?}",
-                segment.as_rule()
-            ));
-        }
-        path.push(segment.as_str().to_string());
-    }
-
-    if path.is_empty() {
-        return Err("Function call path was empty.".to_string());
-    }
+    let path = collect_path_segments(path_pair, "Function call")?;
 
     let mut arguments: Vec<Spanned<Expression>> = Vec::new();
     for item in inner {

@@ -22,6 +22,44 @@ pub(crate) fn expect_single_inner<'input>(
     Ok(first)
 }
 
+/// Find the first inner child of `pair` matching `rule`.
+///
+/// `context` is included in the error message to identify which builder
+/// asked for it (e.g. "If statement missing condition expression.").
+pub(crate) fn find_child<'input>(
+    pair: Pair<'input, Rule>,
+    rule: Rule,
+    context: &str,
+) -> Result<Pair<'input, Rule>, String> {
+    pair.into_inner()
+        .find(|p| p.as_rule() == rule)
+        .ok_or_else(|| format!("{context} missing {rule:?}."))
+}
+
+/// Convert a `path` parse node into its identifier segments, validating
+/// each child is an `identifier` and rejecting empty paths.
+pub(crate) fn collect_path_segments(
+    path_pair: Pair<Rule>,
+    context: &str,
+) -> Result<Vec<String>, String> {
+    let mut path: Vec<String> = Vec::new();
+    for segment in path_pair.into_inner() {
+        if segment.as_rule() != Rule::identifier {
+            return Err(format!(
+                "{context} expected identifier, got {:?}",
+                segment.as_rule()
+            ));
+        }
+        path.push(segment.as_str().to_string());
+    }
+
+    if path.is_empty() {
+        return Err(format!("{context} path was empty."));
+    }
+
+    Ok(path)
+}
+
 pub(crate) fn unquote_string(text: &str) -> Result<String, String> {
     if !text.starts_with('"') || !text.ends_with('"') || text.len() < 2 {
         return Err(format!("Invalid string literal: {text}"));

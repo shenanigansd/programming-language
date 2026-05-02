@@ -4,6 +4,7 @@ use pest::iterators::Pair;
 use crate::grammar::Rule;
 
 use super::expressions::build_expression;
+use super::helpers::{collect_path_segments, find_child};
 
 pub(crate) fn build_assignment_statement(pair: Pair<Rule>) -> Result<Statement, String> {
     // assignment_statement = { identifier ~ "=" ~ expression ~ ";" }
@@ -31,10 +32,7 @@ pub(crate) fn build_assignment_statement(pair: Pair<Rule>) -> Result<Statement, 
 
 pub(crate) fn build_expression_statement(pair: Pair<Rule>) -> Result<Statement, String> {
     // expression_statement = { expression ~ ";" }
-    let expression_pair = pair
-        .into_inner()
-        .find(|p| p.as_rule() == Rule::expression)
-        .ok_or_else(|| "Expression statement missing expression.".to_string())?;
+    let expression_pair = find_child(pair, Rule::expression, "Expression statement")?;
 
     Ok(Statement::Expression {
         expression: build_expression(expression_pair)?,
@@ -83,12 +81,7 @@ pub(crate) fn build_if_statement(pair: Pair<Rule>) -> Result<Statement, String> 
 
 fn extract_else_clause(pair: Pair<Rule>) -> Result<Vec<Spanned<Statement>>, String> {
     // else_clause = { "else" ~ block_statement }
-    let block_pair = pair
-        .into_inner()
-        .find(|p| p.as_rule() == Rule::block_statement)
-        .ok_or_else(|| "Else clause missing block.".to_string())?;
-
-    extract_block_statements(block_pair)
+    extract_block_statements(find_child(pair, Rule::block_statement, "Else clause")?)
 }
 
 fn extract_block_statements(block_pair: Pair<Rule>) -> Result<Vec<Spanned<Statement>>, String> {
@@ -165,25 +158,8 @@ pub(crate) fn build_return_statement(pair: Pair<Rule>) -> Result<Statement, Stri
 
 pub(crate) fn build_use_statement(pair: Pair<Rule>) -> Result<Statement, String> {
     // use_statement = { "use" ~ path ~ ";" }
-    let path_pair = pair
-        .into_inner()
-        .find(|p| p.as_rule() == Rule::path)
-        .ok_or_else(|| "Use statement missing module path.".to_string())?;
-
-    let mut path: Vec<String> = Vec::new();
-    for segment in path_pair.into_inner() {
-        if segment.as_rule() != Rule::identifier {
-            return Err(format!(
-                "Use path expected identifier, got {:?}",
-                segment.as_rule()
-            ));
-        }
-        path.push(segment.as_str().to_string());
-    }
-
-    if path.is_empty() {
-        return Err("Use statement path was empty.".to_string());
-    }
+    let path_pair = find_child(pair, Rule::path, "Use statement")?;
+    let path = collect_path_segments(path_pair, "Use statement")?;
 
     Ok(Statement::Use { path })
 }

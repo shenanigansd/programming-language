@@ -4,7 +4,9 @@
 //! It contains NO parsing and NO execution logic.
 
 use std::fmt;
+mod diagnostic;
 mod span;
+pub use diagnostic::Diagnostic;
 pub use span::{Span, Spanned};
 
 #[derive(Debug, Clone, PartialEq)]

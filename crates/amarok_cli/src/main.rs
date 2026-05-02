@@ -1,3 +1,4 @@
+use amarok_syntax::Diagnostic;
 use std::env;
 use std::fs;
 
@@ -27,7 +28,7 @@ fn run() -> Result<(), String> {
         Err(error) => {
             return Err(format!(
                 "Amarok error: {}",
-                render_parse_error(&path, &source, &error)
+                render_diagnostic(&path, &source, &error)
             ));
         }
     };
@@ -45,7 +46,7 @@ fn run() -> Result<(), String> {
     if let Err(error) = result {
         return Err(format!(
             "Amarok error: {}",
-            render_runtime_error(&path, &source, &error)
+            render_diagnostic(&path, &source, &error)
         ));
     }
 
@@ -94,14 +95,10 @@ fn line_text_and_line_start(source: &str, line_number: usize) -> Option<(&str, u
     }
 }
 
-fn render_runtime_error(
-    path: &str,
-    source: &str,
-    error: &amarok_interpreter::RuntimeError,
-) -> String {
-    if let Some(span) = error.span {
+fn render_diagnostic(path: &str, source: &str, diagnostic: &Diagnostic) -> String {
+    if let Some(span) = diagnostic.span {
         let (line, col) = line_col_from_offset(source, span.start);
-        let mut output = format!("{path}:{line}:{col}: {}\n", error.message);
+        let mut output = format!("{path}:{line}:{col}: {}\n", diagnostic.message);
 
         if let Some((line_text, line_start)) = line_text_and_line_start(source, line) {
             output.push_str(line_text);
@@ -117,30 +114,6 @@ fn render_runtime_error(
 
         output
     } else {
-        format!("{path}: {}\n", error.message)
-    }
-}
-
-fn render_parse_error(path: &str, source: &str, error: &amarok_parser::ParseError) -> String {
-    // Same structure as render_runtime_error, just reading error.message + error.span.
-    if let Some(span) = error.span {
-        let (line, col) = line_col_from_offset(source, span.start);
-        let mut output = format!("{path}:{line}:{col}: {}\n", error.message);
-
-        if let Some((line_text, line_start)) = line_text_and_line_start(source, line) {
-            output.push_str(line_text);
-            output.push('\n');
-
-            let caret_start = span.start.saturating_sub(line_start);
-            let caret_end = span.end.saturating_sub(line_start).max(caret_start + 1);
-
-            output.push_str(&" ".repeat(caret_start));
-            output.push_str(&"^".repeat(caret_end - caret_start));
-            output.push('\n');
-        }
-
-        output
-    } else {
-        format!("{path}: {}\n", error.message)
+        format!("{path}: {}\n", diagnostic.message)
     }
 }

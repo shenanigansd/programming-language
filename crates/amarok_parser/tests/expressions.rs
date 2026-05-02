@@ -1,32 +1,8 @@
 use amarok_parser::parse_expression;
-use amarok_syntax::{BinaryOperator, Expression, Spanned};
+use amarok_syntax::{BinaryOperator, Expression};
 
-fn strip_spans_expression(expression: &Spanned<Expression>) -> Expression {
-    match &expression.value {
-        Expression::Integer(value) => Expression::Integer(*value),
-        Expression::String(value) => Expression::String(value.clone()),
-        Expression::Variable(name) => Expression::Variable(name.clone()),
-
-        Expression::FunctionCall { name, arguments } => Expression::FunctionCall {
-            name: name.clone(),
-            arguments: arguments
-                .iter()
-                .map(strip_spans_expression)
-                .map(Spanned::from) // zero-span spanned arg
-                .collect(),
-        },
-
-        Expression::Binary {
-            left,
-            operator,
-            right,
-        } => Expression::Binary {
-            left: Box::new(Spanned::from(strip_spans_expression(left))),
-            operator: *operator,
-            right: Box::new(Spanned::from(strip_spans_expression(right))),
-        },
-    }
-}
+mod common;
+use common::strip_spans_expression;
 
 #[test]
 fn parses_integer_expression() {

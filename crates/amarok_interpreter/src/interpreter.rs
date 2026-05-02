@@ -1,16 +1,14 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use amarok_syntax::{
-    BinaryOperator, Diagnostic, Expression, Program, SourceMap, Span, Spanned, Statement,
-};
+use amarok_syntax::{Diagnostic, Expression, Program, SourceMap, Span, Spanned, Statement};
 
 use crate::control_flow::ControlFlow;
 use crate::function::{BuiltinFunction, Function};
 use crate::module_loader::{ModuleExports, ModuleLoader};
 use crate::scope::ScopeStack;
 use crate::std_lib;
-use crate::value::{Value, is_truthy};
+use crate::value::{Value, evaluate_binary, is_truthy};
 
 pub struct Interpreter {
     scopes: ScopeStack,
@@ -408,38 +406,5 @@ impl Interpreter {
 impl Default for Interpreter {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-fn evaluate_binary(
-    operator: BinaryOperator,
-    left: Value,
-    right: Value,
-    span: Span,
-) -> Result<Value, Diagnostic> {
-    match (operator, left, right) {
-        (BinaryOperator::Add, Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a + b)),
-        (BinaryOperator::Subtract, Value::Integer(a), Value::Integer(b)) => {
-            Ok(Value::Integer(a - b))
-        }
-        (BinaryOperator::Multiply, Value::Integer(a), Value::Integer(b)) => {
-            Ok(Value::Integer(a * b))
-        }
-        (BinaryOperator::Divide, Value::Integer(a), Value::Integer(b)) => {
-            if b == 0 {
-                Err(Diagnostic::new("Division by zero.").with_span(span))
-            } else {
-                Ok(Value::Integer(a / b))
-            }
-        }
-
-        // Convenience: string concatenation for "+"
-        (BinaryOperator::Add, Value::String(a), Value::String(b)) => {
-            Ok(Value::String(format!("{a}{b}")))
-        }
-
-        (op, a, b) => {
-            Err(Diagnostic::new(format!("Unsupported operation: {a:?} {op} {b:?}")).with_span(span))
-        }
     }
 }

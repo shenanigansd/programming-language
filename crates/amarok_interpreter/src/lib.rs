@@ -9,16 +9,17 @@
 //! handles both phases.
 //!
 //! Internal modules:
-//! - `interpreter` — the [`Interpreter`] struct and execution logic
+//! - `interpreter` — the [`Interpreter`] struct and its public API
+//! - `eval` — recursive AST walk (statements + expressions)
 //! - `value` — [`Value`] enum and formatting/truthiness helpers
 //! - `control_flow` — control-flow signal returned by statement execution
 //! - `function` — user-defined function representation and builtin signature
 //! - `scope` — lexical scope stack
-//! - `core_lib` — registration of items in the `core::` namespace
+//! - `module_loader` — `use` statement resolution and module caching
 //! - `std_lib` — registration of items in the `std::` namespace
 
 mod control_flow;
-mod core_lib;
+mod eval;
 mod function;
 mod interpreter;
 mod module_loader;

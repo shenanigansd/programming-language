@@ -1,3 +1,9 @@
+//! Command-line entry point for Amarok.
+//!
+//! Parses arguments, reads the source file, registers it with a
+//! [`SourceMap`], invokes [`amarok_parser`] then [`amarok_interpreter`],
+//! and renders any [`Diagnostic`] with line and column information.
+
 use amarok_syntax::{Diagnostic, FileId, SourceMap};
 use std::env;
 use std::fs;

@@ -1,47 +1,47 @@
-use amarok_syntax::{Spanned, Statement};
+use amarok_syntax::{Diagnostic, Spanned, Statement};
 use pest::iterators::Pair;
 
 use crate::grammar::Rule;
 
 use super::expressions::build_expression;
+use super::helpers::{collect_path_segments, find_child, span_of};
 
-pub(crate) fn build_assignment_statement(pair: Pair<Rule>) -> Result<Statement, String> {
+pub(crate) fn build_assignment_statement(pair: Pair<Rule>) -> Result<Statement, Diagnostic> {
     // assignment_statement = { identifier ~ "=" ~ expression ~ ";" }
+    let outer_span = span_of(&pair);
     let mut inner = pair.into_inner();
 
     let name_pair = inner
         .next()
-        .ok_or_else(|| "Assignment missing identifier.".to_string())?;
+        .ok_or_else(|| Diagnostic::new("Assignment missing identifier.").with_span(outer_span))?;
     if name_pair.as_rule() != Rule::identifier {
-        return Err(format!(
+        return Err(Diagnostic::new(format!(
             "Assignment expected identifier, got {:?}",
             name_pair.as_rule()
-        ));
+        ))
+        .with_span(span_of(&name_pair)));
     }
     let name = name_pair.as_str().to_string();
 
     let expression_pair = inner
         .find(|p| p.as_rule() == Rule::expression)
-        .ok_or_else(|| "Assignment missing expression.".to_string())?;
+        .ok_or_else(|| Diagnostic::new("Assignment missing expression.").with_span(outer_span))?;
 
     let value = build_expression(expression_pair)?;
 
     Ok(Statement::Assignment { name, value })
 }
 
-pub(crate) fn build_expression_statement(pair: Pair<Rule>) -> Result<Statement, String> {
+pub(crate) fn build_expression_statement(pair: Pair<Rule>) -> Result<Statement, Diagnostic> {
     // expression_statement = { expression ~ ";" }
-    let expression_pair = pair
-        .into_inner()
-        .find(|p| p.as_rule() == Rule::expression)
-        .ok_or_else(|| "Expression statement missing expression.".to_string())?;
+    let expression_pair = find_child(pair, Rule::expression, "Expression statement")?;
 
     Ok(Statement::Expression {
         expression: build_expression(expression_pair)?,
     })
 }
 
-pub(crate) fn build_block_statement(pair: Pair<Rule>) -> Result<Statement, String> {
+pub(crate) fn build_block_statement(pair: Pair<Rule>) -> Result<Statement, Diagnostic> {
     // block_statement = { "{" ~ statement* ~ "}" }
     let mut statements: Vec<Spanned<Statement>> = Vec::new();
 
@@ -53,18 +53,21 @@ pub(crate) fn build_block_statement(pair: Pair<Rule>) -> Result<Statement, Strin
     Ok(Statement::Block { statements })
 }
 
-pub(crate) fn build_if_statement(pair: Pair<Rule>) -> Result<Statement, String> {
+pub(crate) fn build_if_statement(pair: Pair<Rule>) -> Result<Statement, Diagnostic> {
     // if_statement = { "if" ~ "(" ~ expression ~ ")" ~ block_statement ~ else_clause? }
+    let outer_span = span_of(&pair);
     let mut inner = pair.into_inner();
 
     let condition_pair = inner
         .find(|p| p.as_rule() == Rule::expression)
-        .ok_or_else(|| "If statement missing condition expression.".to_string())?;
+        .ok_or_else(|| {
+            Diagnostic::new("If statement missing condition expression.").with_span(outer_span)
+        })?;
     let condition = build_expression(condition_pair)?;
 
     let then_block_pair = inner
         .find(|p| p.as_rule() == Rule::block_statement)
-        .ok_or_else(|| "If statement missing then block.".to_string())?;
+        .ok_or_else(|| Diagnostic::new("If statement missing then block.").with_span(outer_span))?;
     let then_branch = extract_block_statements(then_block_pair)?;
 
     let mut else_branch: Vec<Spanned<Statement>> = Vec::new();
@@ -81,17 +84,12 @@ pub(crate) fn build_if_statement(pair: Pair<Rule>) -> Result<Statement, String> 
     })
 }
 
-fn extract_else_clause(pair: Pair<Rule>) -> Result<Vec<Spanned<Statement>>, String> {
+fn extract_else_clause(pair: Pair<Rule>) -> Result<Vec<Spanned<Statement>>, Diagnostic> {
     // else_clause = { "else" ~ block_statement }
-    let block_pair = pair
-        .into_inner()
-        .find(|p| p.as_rule() == Rule::block_statement)
-        .ok_or_else(|| "Else clause missing block.".to_string())?;
-
-    extract_block_statements(block_pair)
+    extract_block_statements(find_child(pair, Rule::block_statement, "Else clause")?)
 }
 
-fn extract_block_statements(block_pair: Pair<Rule>) -> Result<Vec<Spanned<Statement>>, String> {
+fn extract_block_statements(block_pair: Pair<Rule>) -> Result<Vec<Spanned<Statement>>, Diagnostic> {
     // block_statement = { "{" ~ statement* ~ "}" }
     let mut statements = Vec::new();
     for item in block_pair.into_inner() {
@@ -100,30 +98,38 @@ fn extract_block_statements(block_pair: Pair<Rule>) -> Result<Vec<Spanned<Statem
     Ok(statements)
 }
 
-pub(crate) fn build_while_statement(pair: Pair<Rule>) -> Result<Statement, String> {
+pub(crate) fn build_while_statement(pair: Pair<Rule>) -> Result<Statement, Diagnostic> {
     // while_statement = { "while" ~ "(" ~ expression ~ ")" ~ block_statement }
+    let outer_span = span_of(&pair);
     let mut inner = pair.into_inner();
 
     let condition_pair = inner
         .find(|p| p.as_rule() == Rule::expression)
-        .ok_or_else(|| "While statement missing condition expression.".to_string())?;
+        .ok_or_else(|| {
+            Diagnostic::new("While statement missing condition expression.").with_span(outer_span)
+        })?;
     let condition = build_expression(condition_pair)?;
 
     let body_block_pair = inner
         .find(|p| p.as_rule() == Rule::block_statement)
-        .ok_or_else(|| "While statement missing body block.".to_string())?;
+        .ok_or_else(|| {
+            Diagnostic::new("While statement missing body block.").with_span(outer_span)
+        })?;
     let body = extract_block_statements(body_block_pair)?;
 
     Ok(Statement::While { condition, body })
 }
 
-pub(crate) fn build_function_definition(pair: Pair<Rule>) -> Result<Statement, String> {
+pub(crate) fn build_function_definition(pair: Pair<Rule>) -> Result<Statement, Diagnostic> {
     // function_definition = { "def" ~ identifier ~ "(" ~ parameter_list? ~ ")" ~ block_statement }
+    let outer_span = span_of(&pair);
     let mut inner = pair.into_inner();
 
     let name_pair = inner
         .find(|p| p.as_rule() == Rule::identifier)
-        .ok_or_else(|| "Function definition missing name.".to_string())?;
+        .ok_or_else(|| {
+            Diagnostic::new("Function definition missing name.").with_span(outer_span)
+        })?;
     let name = name_pair.as_str().to_string();
 
     let mut parameters: Vec<String> = Vec::new();
@@ -152,7 +158,7 @@ pub(crate) fn build_function_definition(pair: Pair<Rule>) -> Result<Statement, S
     })
 }
 
-pub(crate) fn build_return_statement(pair: Pair<Rule>) -> Result<Statement, String> {
+pub(crate) fn build_return_statement(pair: Pair<Rule>) -> Result<Statement, Diagnostic> {
     // return_statement = { "return" ~ expression? ~ ";" }
     let expression_pair = pair.into_inner().find(|p| p.as_rule() == Rule::expression);
     let value = match expression_pair {
@@ -163,27 +169,10 @@ pub(crate) fn build_return_statement(pair: Pair<Rule>) -> Result<Statement, Stri
     Ok(Statement::Return { value })
 }
 
-pub(crate) fn build_use_statement(pair: Pair<Rule>) -> Result<Statement, String> {
+pub(crate) fn build_use_statement(pair: Pair<Rule>) -> Result<Statement, Diagnostic> {
     // use_statement = { "use" ~ path ~ ";" }
-    let path_pair = pair
-        .into_inner()
-        .find(|p| p.as_rule() == Rule::path)
-        .ok_or_else(|| "Use statement missing module path.".to_string())?;
-
-    let mut path: Vec<String> = Vec::new();
-    for segment in path_pair.into_inner() {
-        if segment.as_rule() != Rule::identifier {
-            return Err(format!(
-                "Use path expected identifier, got {:?}",
-                segment.as_rule()
-            ));
-        }
-        path.push(segment.as_str().to_string());
-    }
-
-    if path.is_empty() {
-        return Err("Use statement path was empty.".to_string());
-    }
+    let path_pair = find_child(pair, Rule::path, "Use statement")?;
+    let path = collect_path_segments(path_pair, "Use statement")?;
 
     Ok(Statement::Use { path })
 }

@@ -1,6 +1,0 @@
-# Top-level statement runs once on first load.
-std::print("loading shared");
-
-def shared_value() {
-    return 42;
-}

@@ -1,5 +1,0 @@
-use math;
-
-def double(x) {
-    return add(x, x);
-}

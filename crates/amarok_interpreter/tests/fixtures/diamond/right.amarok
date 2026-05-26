@@ -1,5 +1,0 @@
-use shared;
-
-def right() {
-    return shared_value();
-}

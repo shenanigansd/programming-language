@@ -1,2 +1,0 @@
-use b;
-def from_a() { return 1; }

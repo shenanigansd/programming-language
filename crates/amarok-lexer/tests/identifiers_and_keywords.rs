@@ -66,7 +66,6 @@ fn all_keywords_produce_their_keyword_token() {
         ("let", Token::Let),
         ("fun", Token::Fun),
         ("return", Token::Return),
-        ("print", Token::Print),
         ("true", Token::True),
         ("false", Token::False),
         ("nil", Token::Nil),

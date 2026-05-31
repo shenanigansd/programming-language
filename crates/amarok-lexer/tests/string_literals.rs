@@ -2,16 +2,17 @@ use amarok_lexer::{Token, tokenize};
 
 #[test]
 fn empty_string_literal() {
-    let tokens = tokenize("\"\"");
+    let (tokens, diagnostics) = tokenize("\"\"");
     assert_eq!(
         tokens,
         vec![Token::StringLiteral(String::new()), Token::EndOfFile],
     );
+    assert!(diagnostics.is_empty());
 }
 
 #[test]
 fn simple_string_literal() {
-    let tokens = tokenize("\"hello\"");
+    let (tokens, diagnostics) = tokenize("\"hello\"");
     assert_eq!(
         tokens,
         vec![
@@ -19,11 +20,12 @@ fn simple_string_literal() {
             Token::EndOfFile,
         ],
     );
+    assert!(diagnostics.is_empty());
 }
 
 #[test]
 fn string_literal_with_spaces_inside() {
-    let tokens = tokenize("\"hello world\"");
+    let (tokens, diagnostics) = tokenize("\"hello world\"");
     assert_eq!(
         tokens,
         vec![
@@ -31,11 +33,12 @@ fn string_literal_with_spaces_inside() {
             Token::EndOfFile,
         ],
     );
+    assert!(diagnostics.is_empty());
 }
 
 #[test]
 fn string_literal_can_span_multiple_lines() {
-    let tokens = tokenize("\"line one\nline two\"");
+    let (tokens, diagnostics) = tokenize("\"line one\nline two\"");
     assert_eq!(
         tokens,
         vec![
@@ -43,11 +46,12 @@ fn string_literal_can_span_multiple_lines() {
             Token::EndOfFile,
         ],
     );
+    assert!(diagnostics.is_empty());
 }
 
 #[test]
 fn string_literal_between_other_tokens() {
-    let tokens = tokenize("(\"hello\")");
+    let (tokens, diagnostics) = tokenize("(\"hello\")");
     assert_eq!(
         tokens,
         vec![
@@ -57,10 +61,19 @@ fn string_literal_between_other_tokens() {
             Token::EndOfFile,
         ],
     );
+    assert!(diagnostics.is_empty());
 }
 
 #[test]
-#[should_panic(expected = "unterminated string literal")]
-fn unterminated_string_literal_panics() {
-    let _ = tokenize("\"this string has no closing quote");
+fn unterminated_string_literal_records_a_diagnostic() {
+    let (tokens, diagnostics) = tokenize("\"this string has no closing quote");
+    assert_eq!(
+        tokens,
+        vec![
+            Token::StringLiteral(String::from("this string has no closing quote")),
+            Token::EndOfFile,
+        ],
+    );
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(diagnostics[0].message, "unterminated string literal");
 }

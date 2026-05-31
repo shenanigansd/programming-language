@@ -16,8 +16,11 @@ fn each_single_character_punctuation_produces_its_token() {
     ];
 
     for (source, expected) in cases {
-        let actual = tokenize(source);
-        let want = vec![expected, Token::EndOfFile];
-        assert_eq!(actual, want, "input {source:?} produced the wrong tokens");
+        let (tokens, diagnostics) = tokenize(source);
+        assert_eq!(tokens, vec![expected, Token::EndOfFile], "input {source:?}");
+        assert!(
+            diagnostics.is_empty(),
+            "input {source:?} produced unexpected diagnostics"
+        );
     }
 }

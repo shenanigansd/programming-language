@@ -1,3 +1,5 @@
+pub use amarok_diagnostics::{Diagnostic, SourcePosition};
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     LeftParenthesis,
@@ -81,9 +83,13 @@ impl Lexer {
     }
 
     #[allow(clippy::too_many_lines)]
-    fn run(mut self) -> Vec<Token> {
+    fn run(mut self) -> (Vec<Token>, Vec<Diagnostic>) {
         let mut tokens = Vec::new();
+        let mut diagnostics = Vec::new();
         while !self.is_at_end() {
+            let start_position = SourcePosition {
+                character_index: self.current,
+            };
             let character = self.advance();
             let token = match character {
                 '(' => Token::LeftParenthesis,
@@ -126,10 +132,6 @@ impl Lexer {
                 }
                 '/' => {
                     if self.match_next('/') {
-                        // Line comment: consume characters up to (but not
-                        // including) the next newline. We leave the newline
-                        // itself for the whitespace arm to skip on the next
-                        // iteration of the outer loop.
                         while let Some(next_character) = self.peek() {
                             if next_character == '\n' {
                                 break;
@@ -144,7 +146,15 @@ impl Lexer {
                     let mut content = String::new();
                     loop {
                         match self.peek() {
-                            None => panic!("unterminated string literal"),
+                            None => {
+                                // Recovery: record the error, then emit a best-effort
+                                // token containing whatever we managed to read.
+                                diagnostics.push(Diagnostic::new(
+                                    "unterminated string literal",
+                                    start_position,
+                                ));
+                                break;
+                            }
                             Some('"') => {
                                 self.advance(); // consume the closing quote
                                 break;
@@ -162,9 +172,8 @@ impl Lexer {
                     while let Some('0'..='9') = self.peek() {
                         number_text.push(self.advance());
                     }
-                    // Fractional part: only if there's a dot AND a digit after it.
                     if self.peek() == Some('.') && matches!(self.peek_next(), Some('0'..='9')) {
-                        number_text.push(self.advance()); // consume the dot
+                        number_text.push(self.advance());
                         while let Some('0'..='9') = self.peek() {
                             number_text.push(self.advance());
                         }
@@ -200,16 +209,23 @@ impl Lexer {
                     }
                 }
                 ' ' | '\t' | '\r' | '\n' => continue,
-                other => panic!("unexpected character: {other:?}"),
+                other => {
+                    // Recovery: record the error and skip this one character.
+                    diagnostics.push(Diagnostic::new(
+                        format!("unexpected character: {other:?}"),
+                        start_position,
+                    ));
+                    continue;
+                }
             };
             tokens.push(token);
         }
         tokens.push(Token::EndOfFile);
-        tokens
+        (tokens, diagnostics)
     }
 }
 
 #[allow(clippy::must_use_candidate)]
-pub fn tokenize(source: &str) -> Vec<Token> {
+pub fn tokenize(source: &str) -> (Vec<Token>, Vec<Diagnostic>) {
     Lexer::new(source).run()
 }

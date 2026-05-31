@@ -7,5 +7,12 @@ name = "amarok-cli"
 version = "0.1.0"
 
 [[package]]
+name = "amarok-diagnostics"
+version = "0.1.0"
+
+[[package]]
 name = "amarok-lexer"
 version = "0.1.0"
+dependencies = [
+ "amarok-diagnostics",
+]

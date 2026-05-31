@@ -2,25 +2,27 @@ use amarok_lexer::{Token, tokenize};
 
 #[test]
 fn simple_identifier() {
-    let tokens = tokenize("hello");
+    let (tokens, diagnostics) = tokenize("hello");
     assert_eq!(
         tokens,
         vec![Token::Identifier(String::from("hello")), Token::EndOfFile],
     );
+    assert!(diagnostics.is_empty());
 }
 
 #[test]
 fn identifier_can_contain_digits_after_the_first_character() {
-    let tokens = tokenize("var1");
+    let (tokens, diagnostics) = tokenize("var1");
     assert_eq!(
         tokens,
         vec![Token::Identifier(String::from("var1")), Token::EndOfFile],
     );
+    assert!(diagnostics.is_empty());
 }
 
 #[test]
 fn identifier_can_contain_underscores() {
-    let tokens = tokenize("my_variable");
+    let (tokens, diagnostics) = tokenize("my_variable");
     assert_eq!(
         tokens,
         vec![
@@ -28,21 +30,23 @@ fn identifier_can_contain_underscores() {
             Token::EndOfFile
         ],
     );
+    assert!(diagnostics.is_empty());
 }
 
 #[test]
 fn a_lone_underscore_is_an_identifier() {
-    let tokens = tokenize("_");
+    let (tokens, diagnostics) = tokenize("_");
     assert_eq!(
         tokens,
         vec![Token::Identifier(String::from("_")), Token::EndOfFile],
     );
+    assert!(diagnostics.is_empty());
 }
 
 #[test]
 fn identifier_cannot_start_with_a_digit() {
     // "1foo" should be a number followed by an identifier, not one token.
-    let tokens = tokenize("1foo");
+    let (tokens, diagnostics) = tokenize("1foo");
     assert_eq!(
         tokens,
         vec![
@@ -51,6 +55,7 @@ fn identifier_cannot_start_with_a_digit() {
             Token::EndOfFile,
         ],
     );
+    assert!(diagnostics.is_empty());
 }
 
 #[test]
@@ -71,12 +76,13 @@ fn all_keywords_produce_their_keyword_token() {
         ("nil", Token::Nil),
     ];
     for (source, expected) in cases {
-        let tokens = tokenize(source);
+        let (tokens, diagnostics) = tokenize(source);
         assert_eq!(
             tokens,
             vec![expected, Token::EndOfFile],
             "keyword {source:?} did not produce the expected token",
         );
+        assert!(diagnostics.is_empty());
     }
 }
 
@@ -84,18 +90,20 @@ fn all_keywords_produce_their_keyword_token() {
 fn keyword_prefix_followed_by_other_letters_is_an_identifier() {
     // "ifx" starts with "if" but it should be the single identifier "ifx",
     // not Token::If followed by Token::Identifier("x").
-    let tokens = tokenize("ifx");
+    let (tokens, diagnostics) = tokenize("ifx");
     assert_eq!(
         tokens,
         vec![Token::Identifier(String::from("ifx")), Token::EndOfFile],
     );
+    assert!(diagnostics.is_empty());
 }
 
 #[test]
 fn identifier_containing_a_keyword_as_a_substring_is_one_identifier() {
-    let tokens = tokenize("x_if_y");
+    let (tokens, diagnostics) = tokenize("x_if_y");
     assert_eq!(
         tokens,
         vec![Token::Identifier(String::from("x_if_y")), Token::EndOfFile],
     );
+    assert!(diagnostics.is_empty());
 }

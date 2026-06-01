@@ -2,8 +2,8 @@ mod common;
 
 use amarok_lexer::TokenKind;
 use amarok_parser::parse;
-use amarok_syntax::{BinaryOperator, Expression};
-use common::token;
+use amarok_syntax::{BinaryOperator, ExpressionKind};
+use common::{expression, token};
 
 #[test]
 fn multiplication_of_two_numbers() {
@@ -16,11 +16,11 @@ fn multiplication_of_two_numbers() {
     ];
     assert_eq!(
         parse(tokens),
-        Ok(Expression::Binary {
-            left: Box::new(Expression::NumberLiteral(2.0)),
+        Ok(expression(ExpressionKind::Binary {
+            left: Box::new(expression(ExpressionKind::NumberLiteral(2.0))),
             operator: BinaryOperator::Multiply,
-            right: Box::new(Expression::NumberLiteral(3.0)),
-        }),
+            right: Box::new(expression(ExpressionKind::NumberLiteral(3.0))),
+        })),
     );
 }
 
@@ -37,15 +37,15 @@ fn multiplication_binds_tighter_than_addition() {
     ];
     assert_eq!(
         parse(tokens),
-        Ok(Expression::Binary {
-            left: Box::new(Expression::NumberLiteral(1.0)),
+        Ok(expression(ExpressionKind::Binary {
+            left: Box::new(expression(ExpressionKind::NumberLiteral(1.0))),
             operator: BinaryOperator::Add,
-            right: Box::new(Expression::Binary {
-                left: Box::new(Expression::NumberLiteral(2.0)),
+            right: Box::new(expression(ExpressionKind::Binary {
+                left: Box::new(expression(ExpressionKind::NumberLiteral(2.0))),
                 operator: BinaryOperator::Multiply,
-                right: Box::new(Expression::NumberLiteral(3.0)),
-            }),
-        }),
+                right: Box::new(expression(ExpressionKind::NumberLiteral(3.0))),
+            })),
+        })),
     );
 }
 
@@ -62,15 +62,15 @@ fn multiplication_on_the_left_also_binds_tighter() {
     ];
     assert_eq!(
         parse(tokens),
-        Ok(Expression::Binary {
-            left: Box::new(Expression::Binary {
-                left: Box::new(Expression::NumberLiteral(2.0)),
+        Ok(expression(ExpressionKind::Binary {
+            left: Box::new(expression(ExpressionKind::Binary {
+                left: Box::new(expression(ExpressionKind::NumberLiteral(2.0))),
                 operator: BinaryOperator::Multiply,
-                right: Box::new(Expression::NumberLiteral(3.0)),
-            }),
+                right: Box::new(expression(ExpressionKind::NumberLiteral(3.0))),
+            })),
             operator: BinaryOperator::Add,
-            right: Box::new(Expression::NumberLiteral(1.0)),
-        }),
+            right: Box::new(expression(ExpressionKind::NumberLiteral(1.0))),
+        })),
     );
 }
 
@@ -87,14 +87,14 @@ fn division_is_left_associative() {
     ];
     assert_eq!(
         parse(tokens),
-        Ok(Expression::Binary {
-            left: Box::new(Expression::Binary {
-                left: Box::new(Expression::NumberLiteral(8.0)),
+        Ok(expression(ExpressionKind::Binary {
+            left: Box::new(expression(ExpressionKind::Binary {
+                left: Box::new(expression(ExpressionKind::NumberLiteral(8.0))),
                 operator: BinaryOperator::Divide,
-                right: Box::new(Expression::NumberLiteral(4.0)),
-            }),
+                right: Box::new(expression(ExpressionKind::NumberLiteral(4.0))),
+            })),
             operator: BinaryOperator::Divide,
-            right: Box::new(Expression::NumberLiteral(2.0)),
-        }),
+            right: Box::new(expression(ExpressionKind::NumberLiteral(2.0))),
+        })),
     );
 }

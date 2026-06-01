@@ -1,7 +1,7 @@
 pub use amarok_diagnostics::{Diagnostic, SourcePosition};
 
 use amarok_lexer::{Token, TokenKind};
-use amarok_syntax::{BinaryOperator, Expression, Statement, UnaryOperator};
+use amarok_syntax::{BinaryOperator, Expression, ExpressionKind, Statement, UnaryOperator};
 
 struct Parser {
     tokens: Vec<Token>,
@@ -45,13 +45,17 @@ impl Parser {
     ) -> Result<Expression, Diagnostic> {
         let mut left = parse_operand(self)?;
         while let Some(operator) = match_operator(self.peek()) {
+            // Capture the operator's position before consuming it; a runtime
+            // type error on this operation should point a caret here.
+            let operator_position = self.peek().position;
             self.advance();
             let right = parse_operand(self)?;
-            left = Expression::Binary {
+            left = ExpressionKind::Binary {
                 left: Box::new(left),
                 operator,
                 right: Box::new(right),
-            };
+            }
+            .at(operator_position);
         }
         Ok(left)
     }
@@ -114,33 +118,43 @@ impl Parser {
         };
         match operator {
             Some(operator) => {
+                let operator_position = self.peek().position; // the `-` or `not`
                 self.advance(); // consume the operator token
                 let operand = self.parse_unary()?; // recurse for the operand
-                Ok(Expression::Unary {
+                Ok(ExpressionKind::Unary {
                     operator,
                     operand: Box::new(operand),
-                })
+                }
+                .at(operator_position))
             }
             None => self.parse_primary(),
         }
     }
 
     fn parse_primary(&mut self) -> Result<Expression, Diagnostic> {
-        match self.advance().kind {
-            TokenKind::NumberLiteral(value) => Ok(Expression::NumberLiteral(value)),
-            TokenKind::StringLiteral(value) => Ok(Expression::StringLiteral(value)),
-            TokenKind::True => Ok(Expression::BooleanLiteral(true)),
-            TokenKind::False => Ok(Expression::BooleanLiteral(false)),
-            TokenKind::Nil => Ok(Expression::NilLiteral),
+        let token = self.advance();
+        let position = token.position;
+        match token.kind {
+            TokenKind::NumberLiteral(value) => {
+                Ok(ExpressionKind::NumberLiteral(value).at(position))
+            }
+            TokenKind::StringLiteral(value) => {
+                Ok(ExpressionKind::StringLiteral(value).at(position))
+            }
+            TokenKind::True => Ok(ExpressionKind::BooleanLiteral(true).at(position)),
+            TokenKind::False => Ok(ExpressionKind::BooleanLiteral(false).at(position)),
+            TokenKind::Nil => Ok(ExpressionKind::NilLiteral.at(position)),
             TokenKind::LeftParenthesis => {
                 let inner = self.parse_expression()?; // recurse to the TOP of the grammar
                 self.consume(
                     &TokenKind::RightParenthesis,
                     "expected ')' after expression",
                 )?;
+                // Grouping adds no node of its own; the inner expression keeps
+                // its own position.
                 Ok(inner)
             }
-            TokenKind::Identifier(name) => Ok(Expression::Variable(name)),
+            TokenKind::Identifier(name) => Ok(ExpressionKind::Variable(name).at(position)),
             unexpected => Err(Diagnostic::new(
                 format!("expected an expression, found {unexpected:?}"),
                 SourcePosition { character_index: 0 },

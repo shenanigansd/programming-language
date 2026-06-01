@@ -1,18 +1,18 @@
 use amarok_interpreter::Value;
-use amarok_syntax::{BinaryOperator, Expression};
+use amarok_syntax::{BinaryOperator, Expression, ExpressionKind};
 mod common;
-use common::eval;
+use common::{eval, expression};
 
 fn number(value: f64) -> Expression {
-    Expression::NumberLiteral(value)
+    expression(ExpressionKind::NumberLiteral(value))
 }
 
 fn binary(left: Expression, operator: BinaryOperator, right: Expression) -> Expression {
-    Expression::Binary {
+    expression(ExpressionKind::Binary {
         left: Box::new(left),
         operator,
         right: Box::new(right),
-    }
+    })
 }
 
 #[test]
@@ -26,9 +26,9 @@ fn addition_of_numbers() {
 #[test]
 fn string_concatenation() {
     let expression = binary(
-        Expression::StringLiteral(String::from("foo")),
+        expression(ExpressionKind::StringLiteral(String::from("foo"))),
         BinaryOperator::Add,
-        Expression::StringLiteral(String::from("bar")),
+        expression(ExpressionKind::StringLiteral(String::from("bar"))),
     );
     assert_eq!(eval(&expression), Ok(Value::String(String::from("foobar"))));
 }
@@ -38,7 +38,7 @@ fn adding_a_number_and_a_string_is_a_runtime_error() {
     let expression = binary(
         number(1.0),
         BinaryOperator::Add,
-        Expression::StringLiteral(String::from("x")),
+        expression(ExpressionKind::StringLiteral(String::from("x"))),
     );
     assert!(eval(&expression).is_err());
 }
@@ -73,7 +73,7 @@ fn equality_across_different_types_is_false_not_an_error() {
     let expression = binary(
         number(1.0),
         BinaryOperator::Equal,
-        Expression::StringLiteral(String::from("1")),
+        expression(ExpressionKind::StringLiteral(String::from("1"))),
     );
     assert_eq!(eval(&expression), Ok(Value::Boolean(false)));
 }

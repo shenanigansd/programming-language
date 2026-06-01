@@ -2,8 +2,8 @@ mod common;
 
 use amarok_lexer::TokenKind;
 use amarok_parser::parse;
-use amarok_syntax::{BinaryOperator, Expression, UnaryOperator};
-use common::token;
+use amarok_syntax::{BinaryOperator, ExpressionKind, UnaryOperator};
+use common::{expression, token};
 
 #[test]
 fn addition_of_two_numbers() {
@@ -16,11 +16,11 @@ fn addition_of_two_numbers() {
     ];
     assert_eq!(
         parse(tokens),
-        Ok(Expression::Binary {
-            left: Box::new(Expression::NumberLiteral(1.0)),
+        Ok(expression(ExpressionKind::Binary {
+            left: Box::new(expression(ExpressionKind::NumberLiteral(1.0))),
             operator: BinaryOperator::Add,
-            right: Box::new(Expression::NumberLiteral(2.0)),
-        }),
+            right: Box::new(expression(ExpressionKind::NumberLiteral(2.0))),
+        })),
     );
 }
 
@@ -37,15 +37,15 @@ fn subtraction_is_left_associative() {
     ];
     assert_eq!(
         parse(tokens),
-        Ok(Expression::Binary {
-            left: Box::new(Expression::Binary {
-                left: Box::new(Expression::NumberLiteral(1.0)),
+        Ok(expression(ExpressionKind::Binary {
+            left: Box::new(expression(ExpressionKind::Binary {
+                left: Box::new(expression(ExpressionKind::NumberLiteral(1.0))),
                 operator: BinaryOperator::Subtract,
-                right: Box::new(Expression::NumberLiteral(2.0)),
-            }),
+                right: Box::new(expression(ExpressionKind::NumberLiteral(2.0))),
+            })),
             operator: BinaryOperator::Subtract,
-            right: Box::new(Expression::NumberLiteral(3.0)),
-        }),
+            right: Box::new(expression(ExpressionKind::NumberLiteral(3.0))),
+        })),
     );
 }
 
@@ -61,14 +61,14 @@ fn binary_minus_and_unary_minus_coexist() {
     ];
     assert_eq!(
         parse(tokens),
-        Ok(Expression::Binary {
-            left: Box::new(Expression::NumberLiteral(1.0)),
+        Ok(expression(ExpressionKind::Binary {
+            left: Box::new(expression(ExpressionKind::NumberLiteral(1.0))),
             operator: BinaryOperator::Subtract,
-            right: Box::new(Expression::Unary {
+            right: Box::new(expression(ExpressionKind::Unary {
                 operator: UnaryOperator::Negate,
-                operand: Box::new(Expression::NumberLiteral(2.0)),
-            }),
-        }),
+                operand: Box::new(expression(ExpressionKind::NumberLiteral(2.0))),
+            })),
+        })),
     );
 }
 
@@ -82,9 +82,9 @@ fn a_lone_unary_still_parses_through_the_term_rule() {
     ];
     assert_eq!(
         parse(tokens),
-        Ok(Expression::Unary {
+        Ok(expression(ExpressionKind::Unary {
             operator: UnaryOperator::Negate,
-            operand: Box::new(Expression::NumberLiteral(5.0)),
-        }),
+            operand: Box::new(expression(ExpressionKind::NumberLiteral(5.0))),
+        })),
     );
 }

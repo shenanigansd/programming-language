@@ -1,6 +1,6 @@
 pub use amarok_diagnostics::Diagnostic;
 use amarok_diagnostics::SourcePosition;
-use amarok_syntax::{BinaryOperator, Expression, Statement, UnaryOperator};
+use amarok_syntax::{BinaryOperator, Expression, ExpressionKind, Statement, UnaryOperator};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -55,38 +55,45 @@ impl Environment {
 /// Returns a diagnostic when evaluation encounters invalid operand types or
 /// illegal operations such as division by zero.
 pub fn evaluate(expression: &Expression, environment: &Environment) -> Result<Value, Diagnostic> {
-    match expression {
-        Expression::NumberLiteral(number) => Ok(Value::Number(*number)),
-        Expression::StringLiteral(text) => Ok(Value::String(text.clone())),
-        Expression::BooleanLiteral(boolean) => Ok(Value::Boolean(*boolean)),
-        Expression::NilLiteral => Ok(Value::Nil),
-        Expression::Variable(name) => match environment.get(name) {
+    match &expression.kind {
+        ExpressionKind::NumberLiteral(number) => Ok(Value::Number(*number)),
+        ExpressionKind::StringLiteral(text) => Ok(Value::String(text.clone())),
+        ExpressionKind::BooleanLiteral(boolean) => Ok(Value::Boolean(*boolean)),
+        ExpressionKind::NilLiteral => Ok(Value::Nil),
+        ExpressionKind::Variable(name) => match environment.get(name) {
             Some(value) => Ok(value.clone()),
-            None => Err(runtime_error(format!("undefined variable '{name}'"))),
+            None => Err(runtime_error(
+                format!("undefined variable '{name}'"),
+                expression.position,
+            )),
         },
-        Expression::Unary { operator, operand } => {
+        ExpressionKind::Unary { operator, operand } => {
             let operand_value = evaluate(operand, environment)?;
-            evaluate_unary(*operator, operand_value)
+            evaluate_unary(*operator, operand_value, expression.position)
         }
-        Expression::Binary {
+        ExpressionKind::Binary {
             left,
             operator,
             right,
         } => {
             let left_value = evaluate(left, environment)?;
             let right_value = evaluate(right, environment)?;
-            evaluate_binary(*operator, left_value, right_value)
+            evaluate_binary(left_value, *operator, right_value, expression.position)
         }
     }
 }
 
-fn evaluate_unary(operator: UnaryOperator, operand: Value) -> Result<Value, Diagnostic> {
+fn evaluate_unary(
+    operator: UnaryOperator,
+    operand: Value,
+    position: SourcePosition,
+) -> Result<Value, Diagnostic> {
     match operator {
         UnaryOperator::Negate => match operand {
             Value::Number(number) => Ok(Value::Number(-number)),
-            other => Err(Diagnostic::new(
+            other => Err(runtime_error(
                 format!("cannot negate a {} value", type_name(&other)),
-                SourcePosition { character_index: 0 },
+                position,
             )),
         },
         UnaryOperator::Not => Ok(Value::Boolean(!is_truthy(&operand))),
@@ -94,35 +101,44 @@ fn evaluate_unary(operator: UnaryOperator, operand: Value) -> Result<Value, Diag
 }
 
 fn evaluate_binary(
-    operator: BinaryOperator,
     left: Value,
+    operator: BinaryOperator,
     right: Value,
+    position: SourcePosition,
 ) -> Result<Value, Diagnostic> {
     match operator {
         BinaryOperator::Add => match (left, right) {
             (Value::Number(a), Value::Number(b)) => Ok(Value::Number(a + b)),
             (Value::String(a), Value::String(b)) => Ok(Value::String(a + &b)),
-            (left, right) => Err(runtime_error(format!(
-                "cannot add a {} and a {}",
-                type_name(&left),
-                type_name(&right),
-            ))),
+            (left, right) => Err(runtime_error(
+                format!(
+                    "cannot add a {} and a {}",
+                    type_name(&left),
+                    type_name(&right),
+                ),
+                position,
+            )),
         },
-        BinaryOperator::Subtract => arithmetic(left, right, "subtract", |a, b| a - b),
-        BinaryOperator::Multiply => arithmetic(left, right, "multiply", |a, b| a * b),
+        BinaryOperator::Subtract => arithmetic(left, right, "subtract", position, |a, b| a - b),
+        BinaryOperator::Multiply => arithmetic(left, right, "multiply", position, |a, b| a * b),
         BinaryOperator::Divide => match (left, right) {
-            (Value::Number(_), Value::Number(0.0)) => Err(runtime_error("division by zero")),
+            (Value::Number(_), Value::Number(0.0)) => {
+                Err(runtime_error("division by zero", position))
+            }
             (Value::Number(a), Value::Number(b)) => Ok(Value::Number(a / b)),
-            (left, right) => Err(runtime_error(format!(
-                "cannot divide a {} by a {}",
-                type_name(&left),
-                type_name(&right),
-            ))),
+            (left, right) => Err(runtime_error(
+                format!(
+                    "cannot divide a {} by a {}",
+                    type_name(&left),
+                    type_name(&right),
+                ),
+                position,
+            )),
         },
-        BinaryOperator::Less => comparison(left, right, |a, b| a < b),
-        BinaryOperator::LessEqual => comparison(left, right, |a, b| a <= b),
-        BinaryOperator::Greater => comparison(left, right, |a, b| a > b),
-        BinaryOperator::GreaterEqual => comparison(left, right, |a, b| a >= b),
+        BinaryOperator::Less => comparison(left, right, position, |a, b| a < b),
+        BinaryOperator::LessEqual => comparison(left, right, position, |a, b| a <= b),
+        BinaryOperator::Greater => comparison(left, right, position, |a, b| a > b),
+        BinaryOperator::GreaterEqual => comparison(left, right, position, |a, b| a >= b),
         BinaryOperator::Equal => Ok(Value::Boolean(left == right)),
         BinaryOperator::NotEqual => Ok(Value::Boolean(left != right)),
     }
@@ -133,16 +149,20 @@ fn arithmetic(
     left: Value,
     right: Value,
     verb: &str,
+    position: SourcePosition,
     operation: fn(f64, f64) -> f64,
 ) -> Result<Value, Diagnostic> {
     match (left, right) {
         (Value::Number(a), Value::Number(b)) => Ok(Value::Number(operation(a, b))),
-        (left, right) => Err(runtime_error(format!(
-            "cannot {} a {} and a {}",
-            verb,
-            type_name(&left),
-            type_name(&right),
-        ))),
+        (left, right) => Err(runtime_error(
+            format!(
+                "cannot {} a {} and a {}",
+                verb,
+                type_name(&left),
+                type_name(&right),
+            ),
+            position,
+        )),
     }
 }
 
@@ -150,20 +170,24 @@ fn arithmetic(
 fn comparison(
     left: Value,
     right: Value,
+    position: SourcePosition,
     operation: fn(f64, f64) -> bool,
 ) -> Result<Value, Diagnostic> {
     match (left, right) {
         (Value::Number(a), Value::Number(b)) => Ok(Value::Boolean(operation(a, b))),
-        (left, right) => Err(runtime_error(format!(
-            "cannot compare a {} and a {}",
-            type_name(&left),
-            type_name(&right),
-        ))),
+        (left, right) => Err(runtime_error(
+            format!(
+                "cannot compare a {} and a {}",
+                type_name(&left),
+                type_name(&right),
+            ),
+            position,
+        )),
     }
 }
 
-fn runtime_error(message: impl Into<String>) -> Diagnostic {
-    Diagnostic::new(message, SourcePosition { character_index: 0 })
+fn runtime_error(message: impl Into<String>, position: SourcePosition) -> Diagnostic {
+    Diagnostic::new(message, position)
 }
 
 /// The truthiness convention: `nil` and `false` are falsy; everything else,

@@ -16,3 +16,16 @@ version = "0.1.0"
 dependencies = [
  "amarok-diagnostics",
 ]
+
+[[package]]
+name = "amarok-parser"
+version = "0.1.0"
+dependencies = [
+ "amarok-diagnostics",
+ "amarok-lexer",
+ "amarok-syntax",
+]
+
+[[package]]
+name = "amarok-syntax"
+version = "0.1.0"

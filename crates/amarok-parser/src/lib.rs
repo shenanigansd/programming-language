@@ -165,9 +165,23 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<Statement, Diagnostic> {
         if matches!(self.peek().kind, TokenKind::Let) {
             self.parse_let_declaration()
+        } else if matches!(self.peek().kind, TokenKind::LeftBrace) {
+            self.parse_block()
         } else {
             self.parse_expression_statement()
         }
+    }
+
+    fn parse_block(&mut self) -> Result<Statement, Diagnostic> {
+        self.advance(); // consume '{'
+        let mut statements = Vec::new();
+        while !matches!(self.peek().kind, TokenKind::RightBrace)
+            && !matches!(self.peek().kind, TokenKind::EndOfFile)
+        {
+            statements.push(self.parse_statement()?);
+        }
+        self.consume(&TokenKind::RightBrace, "expected '}' to close the block")?;
+        Ok(Statement::Block(statements))
     }
 
     fn parse_let_declaration(&mut self) -> Result<Statement, Diagnostic> {

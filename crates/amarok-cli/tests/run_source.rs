@@ -54,3 +54,19 @@ fn a_parse_error_renders_a_caret() {
 fn a_lex_error_renders_a_caret() {
     assert!(run_source("@;").contains('^'));
 }
+
+#[test]
+fn a_variable_declared_in_a_block_does_not_leak_out() {
+    assert!(run_source("{ let x = 5; } x;").contains("undefined variable"));
+}
+
+#[test]
+fn a_block_can_read_a_variable_from_the_enclosing_scope() {
+    // no error, no output -> the block resolved x through its parent
+    assert_eq!(run_source("let x = 5; { let y = x; }"), "");
+}
+
+#[test]
+fn an_unclosed_block_is_a_parse_error() {
+    assert!(run_source("{ let x = 5;").contains('^'));
+}

@@ -1,8 +1,10 @@
 pub use amarok_diagnostics::Diagnostic;
 use amarok_diagnostics::SourcePosition;
 use amarok_syntax::{BinaryOperator, Expression, ExpressionKind, Statement, UnaryOperator};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
+use std::rc::Rc;
 
 /// A runtime value produced by evaluating an expression.
 #[derive(Debug, Clone, PartialEq)]
@@ -24,27 +26,54 @@ impl fmt::Display for Value {
     }
 }
 
-/// The set of variable bindings in scope during evaluation.
-#[derive(Debug, Default)]
+/// A shared, mutable handle to an environment. A child scope and the scope that
+/// encloses it both hold the *same* environment through one of these handles.
+pub type SharedEnvironment = Rc<RefCell<Environment>>;
+
+/// A lexical scope: the variables defined directly here, plus an optional link
+/// to the scope that encloses this one.
+#[derive(Debug)]
 pub struct Environment {
     values: HashMap<String, Value>,
+    enclosing: Option<SharedEnvironment>,
 }
 
 impl Environment {
+    /// Create a fresh global environment — the outermost scope, enclosed by
+    /// nothing.
     #[allow(clippy::must_use_candidate)]
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new_global() -> SharedEnvironment {
+        Rc::new(RefCell::new(Environment {
+            values: HashMap::new(),
+            enclosing: None,
+        }))
     }
 
-    /// Bind (or rebind) a name to a value.
+    /// Create a new scope nested inside `parent`. Names not found here are looked
+    /// up in `parent`, and outward from there.
+    pub fn new_child(parent: &SharedEnvironment) -> SharedEnvironment {
+        Rc::new(RefCell::new(Environment {
+            values: HashMap::new(),
+            enclosing: Some(Rc::clone(parent)),
+        }))
+    }
+
+    /// Bind a name to a value in *this* scope.
     pub fn define(&mut self, name: impl Into<String>, value: Value) {
         self.values.insert(name.into(), value);
     }
 
-    /// Look up a name, returning the bound value if there is one.
+    /// Look up a name: check this scope first, then walk outward through the
+    /// enclosing scopes. Returns an owned clone of the value if found anywhere.
     #[allow(clippy::must_use_candidate)]
-    pub fn get(&self, name: &str) -> Option<&Value> {
-        self.values.get(name)
+    pub fn get(&self, name: &str) -> Option<Value> {
+        if let Some(value) = self.values.get(name) {
+            Some(value.clone())
+        } else if let Some(enclosing) = &self.enclosing {
+            enclosing.borrow().get(name)
+        } else {
+            None
+        }
     }
 }
 
@@ -54,13 +83,16 @@ impl Environment {
 ///
 /// Returns a diagnostic when evaluation encounters invalid operand types or
 /// illegal operations such as division by zero.
-pub fn evaluate(expression: &Expression, environment: &Environment) -> Result<Value, Diagnostic> {
+pub fn evaluate(
+    expression: &Expression,
+    environment: &SharedEnvironment,
+) -> Result<Value, Diagnostic> {
     match &expression.kind {
         ExpressionKind::NumberLiteral(number) => Ok(Value::Number(*number)),
         ExpressionKind::StringLiteral(text) => Ok(Value::String(text.clone())),
         ExpressionKind::BooleanLiteral(boolean) => Ok(Value::Boolean(*boolean)),
         ExpressionKind::NilLiteral => Ok(Value::Nil),
-        ExpressionKind::Variable(name) => match environment.get(name) {
+        ExpressionKind::Variable(name) => match environment.borrow().get(name) {
             Some(value) => Ok(value.clone()),
             None => Err(runtime_error(
                 format!("undefined variable '{name}'"),
@@ -216,17 +248,24 @@ fn type_name(value: &Value) -> &'static str {
 /// such as applying an operation to values of incompatible types.
 pub fn execute_statement(
     statement: &Statement,
-    environment: &mut Environment,
+    environment: &SharedEnvironment,
 ) -> Result<Option<Value>, Diagnostic> {
     match statement {
         Statement::Let { name, initializer } => {
             let value = evaluate(initializer, environment)?;
-            environment.define(name.clone(), value);
+            environment.borrow_mut().define(name.clone(), value);
             Ok(None)
         }
         Statement::Expression(expression) => {
             let value = evaluate(expression, environment)?;
             Ok(Some(value))
+        }
+        Statement::Block(statements) => {
+            let block_scope = Environment::new_child(environment);
+            for statement in statements {
+                execute_statement(statement, &block_scope)?;
+            }
+            Ok(None)
         }
     }
 }

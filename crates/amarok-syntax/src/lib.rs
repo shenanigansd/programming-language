@@ -79,4 +79,6 @@ pub enum Statement {
     },
     /// An expression run as a statement: `expression ;`.
     Expression(Expression),
+    /// A brace-delimited sequence of statements, run in its own nested scope.
+    Block(Vec<Statement>),
 }

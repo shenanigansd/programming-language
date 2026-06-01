@@ -96,3 +96,23 @@ fn a_let_missing_its_name_is_an_error() {
     ];
     assert!(parse_program(tokens).is_err());
 }
+
+#[test]
+fn a_block_groups_its_inner_statements() {
+    // { 1; 2; }
+    let tokens = vec![
+        token(TokenKind::LeftBrace),
+        token(TokenKind::NumberLiteral(1.0)),
+        token(TokenKind::Semicolon),
+        token(TokenKind::NumberLiteral(2.0)),
+        token(TokenKind::Semicolon),
+        token(TokenKind::RightBrace),
+        token(TokenKind::EndOfFile),
+    ];
+    let program = parse_program(tokens).unwrap();
+    assert_eq!(program.len(), 1);
+    let Statement::Block(statements) = &program[0] else {
+        panic!("expected a block");
+    };
+    assert_eq!(statements.len(), 2);
+}

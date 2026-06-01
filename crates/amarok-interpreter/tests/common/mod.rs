@@ -8,7 +8,7 @@ use amarok_syntax::{Expression, ExpressionKind};
 
 /// Evaluate with no variables in scope — for the many tests that don't use any.
 pub fn eval(expression: &Expression) -> Result<Value, Diagnostic> {
-    evaluate(expression, &Environment::new())
+    evaluate(expression, &Environment::new_global())
 }
 
 /// Build an expression node at the zero position. Evaluation only reads the

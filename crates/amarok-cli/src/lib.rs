@@ -22,10 +22,10 @@ pub fn run_source(source: &str) -> String {
         Err(diagnostic) => return render(source, &diagnostic),
     };
 
-    let mut environment = Environment::new();
+    let environment = Environment::new_global();
     let mut output = Vec::new();
     for statement in &statements {
-        match execute_statement(statement, &mut environment) {
+        match execute_statement(statement, &environment) {
             Ok(Some(value)) => output.push(value.to_string()),
             Ok(None) => {}
             Err(diagnostic) => {

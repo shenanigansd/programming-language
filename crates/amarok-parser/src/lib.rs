@@ -30,11 +30,8 @@ impl Parser {
             self.advance();
             Ok(())
         } else {
-            Err(Diagnostic::new(
-                message,
-                // Placeholder position, same as our other parser errors for now.
-                SourcePosition { character_index: 0 },
-            ))
+            // Point the caret at the unexpected token we actually found.
+            Err(Diagnostic::new(message, self.peek().position))
         }
     }
 
@@ -157,7 +154,7 @@ impl Parser {
             TokenKind::Identifier(name) => Ok(ExpressionKind::Variable(name).at(position)),
             unexpected => Err(Diagnostic::new(
                 format!("expected an expression, found {unexpected:?}"),
-                SourcePosition { character_index: 0 },
+                position,
             )),
         }
     }

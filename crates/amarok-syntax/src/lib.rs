@@ -15,6 +15,8 @@ pub enum Expression {
         operator: BinaryOperator,
         right: Box<Expression>,
     },
+    /// A reference to a variable by name, such as `x`.
+    Variable(String),
 }
 
 /// An operator that takes a single operand.
@@ -40,4 +42,16 @@ pub enum BinaryOperator {
     LessEqual,
     Greater,
     GreaterEqual,
+}
+
+/// A top-level instruction in a program.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Statement {
+    /// A variable declaration: `let name = initializer ;`.
+    Let {
+        name: String,
+        initializer: Expression,
+    },
+    /// An expression run as a statement: `expression ;`.
+    Expression(Expression),
 }

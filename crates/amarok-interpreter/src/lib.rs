@@ -1,6 +1,7 @@
 pub use amarok_diagnostics::Diagnostic;
 use amarok_diagnostics::SourcePosition;
-use amarok_syntax::{BinaryOperator, Expression, UnaryOperator};
+use amarok_syntax::{BinaryOperator, Expression, Statement, UnaryOperator};
+use std::collections::HashMap;
 use std::fmt;
 
 /// A runtime value produced by evaluating an expression.
@@ -23,20 +24,48 @@ impl fmt::Display for Value {
     }
 }
 
+/// The set of variable bindings in scope during evaluation.
+#[derive(Debug, Default)]
+pub struct Environment {
+    values: HashMap<String, Value>,
+}
+
+impl Environment {
+    #[allow(clippy::must_use_candidate)]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Bind (or rebind) a name to a value.
+    pub fn define(&mut self, name: impl Into<String>, value: Value) {
+        self.values.insert(name.into(), value);
+    }
+
+    /// Look up a name, returning the bound value if there is one.
+    #[allow(clippy::must_use_candidate)]
+    pub fn get(&self, name: &str) -> Option<&Value> {
+        self.values.get(name)
+    }
+}
+
 /// Evaluate an expression to a value, or fail with a runtime diagnostic.
 ///
 /// # Errors
 ///
 /// Returns a diagnostic when evaluation encounters invalid operand types or
 /// illegal operations such as division by zero.
-pub fn evaluate(expression: &Expression) -> Result<Value, Diagnostic> {
+pub fn evaluate(expression: &Expression, environment: &Environment) -> Result<Value, Diagnostic> {
     match expression {
         Expression::NumberLiteral(number) => Ok(Value::Number(*number)),
         Expression::StringLiteral(text) => Ok(Value::String(text.clone())),
         Expression::BooleanLiteral(boolean) => Ok(Value::Boolean(*boolean)),
         Expression::NilLiteral => Ok(Value::Nil),
+        Expression::Variable(name) => match environment.get(name) {
+            Some(value) => Ok(value.clone()),
+            None => Err(runtime_error(format!("undefined variable '{name}'"))),
+        },
         Expression::Unary { operator, operand } => {
-            let operand_value = evaluate(operand)?;
+            let operand_value = evaluate(operand, environment)?;
             evaluate_unary(*operator, operand_value)
         }
         Expression::Binary {
@@ -44,9 +73,8 @@ pub fn evaluate(expression: &Expression) -> Result<Value, Diagnostic> {
             operator,
             right,
         } => {
-            // Evaluate both operands left-to-right, then apply the operator.
-            let left_value = evaluate(left)?;
-            let right_value = evaluate(right)?;
+            let left_value = evaluate(left, environment)?;
+            let right_value = evaluate(right, environment)?;
             evaluate_binary(*operator, left_value, right_value)
         }
     }
@@ -151,5 +179,30 @@ fn type_name(value: &Value) -> &'static str {
         Value::String(_) => "string",
         Value::Boolean(_) => "boolean",
         Value::Nil => "nil",
+    }
+}
+
+/// Execute one statement against the environment. Returns the statement's
+/// value if it produces one (an expression statement does; a declaration
+/// doesn't), so a caller can decide what to do with it.
+///
+/// # Errors
+///
+/// Returns a [`Diagnostic`] when evaluating the statement fails at runtime,
+/// such as applying an operation to values of incompatible types.
+pub fn execute_statement(
+    statement: &Statement,
+    environment: &mut Environment,
+) -> Result<Option<Value>, Diagnostic> {
+    match statement {
+        Statement::Let { name, initializer } => {
+            let value = evaluate(initializer, environment)?;
+            environment.define(name.clone(), value);
+            Ok(None)
+        }
+        Statement::Expression(expression) => {
+            let value = evaluate(expression, environment)?;
+            Ok(Some(value))
+        }
     }
 }

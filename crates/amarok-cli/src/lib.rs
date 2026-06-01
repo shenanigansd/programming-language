@@ -1,16 +1,13 @@
 use amarok_diagnostics::render;
-use amarok_interpreter::evaluate;
+use amarok_interpreter::{Environment, execute_statement};
 use amarok_lexer::tokenize;
-use amarok_parser::parse;
+use amarok_parser::parse_program;
 
-/// Run one line of Amarok source and return the text to display: either the
-/// resulting value, or a description of whatever error stopped us.
+/// Run a whole source program and return its output as text — the value of each
+/// expression statement (temporary, until we have a `print` function), or the
+/// first error encountered, rendered with a caret where we have a position.
 #[allow(clippy::must_use_candidate)]
-pub fn run_line(source: &str) -> String {
-    if source.trim().is_empty() {
-        return String::new();
-    }
-
+pub fn run_source(source: &str) -> String {
     let (tokens, lex_diagnostics) = tokenize(source);
     if !lex_diagnostics.is_empty() {
         return lex_diagnostics
@@ -20,13 +17,22 @@ pub fn run_line(source: &str) -> String {
             .join("\n");
     }
 
-    let expression = match parse(tokens) {
-        Ok(expression) => expression,
+    let statements = match parse_program(tokens) {
+        Ok(statements) => statements,
         Err(diagnostic) => return render(source, &diagnostic),
     };
 
-    match evaluate(&expression) {
-        Ok(value) => value.to_string(),
-        Err(diagnostic) => format!("runtime error: {}", diagnostic.message),
+    let mut environment = Environment::new();
+    let mut output = Vec::new();
+    for statement in &statements {
+        match execute_statement(statement, &mut environment) {
+            Ok(Some(value)) => output.push(value.to_string()),
+            Ok(None) => {}
+            Err(diagnostic) => {
+                output.push(format!("runtime error: {}", diagnostic.message));
+                break; // stop at the first runtime error
+            }
+        }
     }
+    output.join("\n")
 }

@@ -1,5 +1,7 @@
-use amarok_interpreter::{Value, evaluate};
+use amarok_interpreter::Value;
 use amarok_syntax::{BinaryOperator, Expression};
+mod common;
+use common::eval;
 
 fn number(value: f64) -> Expression {
     Expression::NumberLiteral(value)
@@ -16,7 +18,7 @@ fn binary(left: Expression, operator: BinaryOperator, right: Expression) -> Expr
 #[test]
 fn addition_of_numbers() {
     assert_eq!(
-        evaluate(&binary(number(1.0), BinaryOperator::Add, number(2.0))),
+        eval(&binary(number(1.0), BinaryOperator::Add, number(2.0))),
         Ok(Value::Number(3.0)),
     );
 }
@@ -28,10 +30,7 @@ fn string_concatenation() {
         BinaryOperator::Add,
         Expression::StringLiteral(String::from("bar")),
     );
-    assert_eq!(
-        evaluate(&expression),
-        Ok(Value::String(String::from("foobar")))
-    );
+    assert_eq!(eval(&expression), Ok(Value::String(String::from("foobar"))));
 }
 
 #[test]
@@ -41,7 +40,7 @@ fn adding_a_number_and_a_string_is_a_runtime_error() {
         BinaryOperator::Add,
         Expression::StringLiteral(String::from("x")),
     );
-    assert!(evaluate(&expression).is_err());
+    assert!(eval(&expression).is_err());
 }
 
 #[test]
@@ -52,18 +51,18 @@ fn the_precedence_tree_evaluates_to_the_right_number() {
         BinaryOperator::Add,
         binary(number(2.0), BinaryOperator::Multiply, number(3.0)),
     );
-    assert_eq!(evaluate(&expression), Ok(Value::Number(7.0)));
+    assert_eq!(eval(&expression), Ok(Value::Number(7.0)));
 }
 
 #[test]
 fn division_by_zero_is_a_runtime_error() {
-    assert!(evaluate(&binary(number(1.0), BinaryOperator::Divide, number(0.0))).is_err());
+    assert!(eval(&binary(number(1.0), BinaryOperator::Divide, number(0.0))).is_err());
 }
 
 #[test]
 fn less_than_compares_two_numbers() {
     assert_eq!(
-        evaluate(&binary(number(1.0), BinaryOperator::Less, number(2.0))),
+        eval(&binary(number(1.0), BinaryOperator::Less, number(2.0))),
         Ok(Value::Boolean(true)),
     );
 }
@@ -76,13 +75,13 @@ fn equality_across_different_types_is_false_not_an_error() {
         BinaryOperator::Equal,
         Expression::StringLiteral(String::from("1")),
     );
-    assert_eq!(evaluate(&expression), Ok(Value::Boolean(false)));
+    assert_eq!(eval(&expression), Ok(Value::Boolean(false)));
 }
 
 #[test]
 fn equality_of_two_equal_numbers_is_true() {
     assert_eq!(
-        evaluate(&binary(number(2.0), BinaryOperator::Equal, number(2.0))),
+        eval(&binary(number(2.0), BinaryOperator::Equal, number(2.0))),
         Ok(Value::Boolean(true)),
     );
 }

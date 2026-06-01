@@ -1,7 +1,7 @@
 pub use amarok_diagnostics::{Diagnostic, SourcePosition};
 
 use amarok_lexer::{Token, TokenKind};
-use amarok_syntax::{BinaryOperator, Expression, UnaryOperator};
+use amarok_syntax::{BinaryOperator, Expression, Statement, UnaryOperator};
 
 struct Parser {
     tokens: Vec<Token>,
@@ -140,11 +140,47 @@ impl Parser {
                 )?;
                 Ok(inner)
             }
+            TokenKind::Identifier(name) => Ok(Expression::Variable(name)),
             unexpected => Err(Diagnostic::new(
                 format!("expected an expression, found {unexpected:?}"),
                 SourcePosition { character_index: 0 },
             )),
         }
+    }
+
+    fn parse_statement(&mut self) -> Result<Statement, Diagnostic> {
+        if matches!(self.peek().kind, TokenKind::Let) {
+            self.parse_let_declaration()
+        } else {
+            self.parse_expression_statement()
+        }
+    }
+
+    fn parse_let_declaration(&mut self) -> Result<Statement, Diagnostic> {
+        self.advance(); // consume 'let'
+        let name_token = self.advance();
+        let name = match name_token.kind {
+            TokenKind::Identifier(name) => name,
+            other => {
+                return Err(Diagnostic::new(
+                    format!("expected a variable name after 'let', found {other:?}"),
+                    name_token.position,
+                ));
+            }
+        };
+        self.consume(&TokenKind::Equal, "expected '=' after variable name")?;
+        let initializer = self.parse_expression()?;
+        self.consume(
+            &TokenKind::Semicolon,
+            "expected ';' after variable declaration",
+        )?;
+        Ok(Statement::Let { name, initializer })
+    }
+
+    fn parse_expression_statement(&mut self) -> Result<Statement, Diagnostic> {
+        let expression = self.parse_expression()?;
+        self.consume(&TokenKind::Semicolon, "expected ';' after expression")?;
+        Ok(Statement::Expression(expression))
     }
 }
 
@@ -162,4 +198,19 @@ pub fn parse(tokens: Vec<Token>) -> Result<Expression, Diagnostic> {
         "expected end of input after expression",
     )?;
     Ok(expression)
+}
+
+/// Parse a whole program: zero or more statements, up to end of input.
+///
+/// # Errors
+///
+/// Returns a [`Diagnostic`] when any statement is malformed, including missing
+/// required tokens (such as `;`) or invalid expressions.
+pub fn parse_program(tokens: Vec<Token>) -> Result<Vec<Statement>, Diagnostic> {
+    let mut parser = Parser::new(tokens);
+    let mut statements = Vec::new();
+    while !matches!(parser.peek().kind, TokenKind::EndOfFile) {
+        statements.push(parser.parse_statement()?);
+    }
+    Ok(statements)
 }

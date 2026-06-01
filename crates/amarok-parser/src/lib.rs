@@ -146,6 +146,11 @@ impl Parser {
 }
 
 /// Parse a token stream into a single expression.
+///
+/// # Errors
+///
+/// Returns a [`Diagnostic`] if the input token stream is not a valid expression
+/// or if trailing tokens remain after parsing.
 pub fn parse(tokens: Vec<Token>) -> Result<Expression, Diagnostic> {
     let mut parser = Parser::new(tokens);
     let expression = parser.parse_expression()?;

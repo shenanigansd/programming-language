@@ -5,10 +5,23 @@ version = 4
 [[package]]
 name = "amarok-cli"
 version = "0.1.0"
+dependencies = [
+ "amarok-interpreter",
+ "amarok-lexer",
+ "amarok-parser",
+]
 
 [[package]]
 name = "amarok-diagnostics"
 version = "0.1.0"
+
+[[package]]
+name = "amarok-interpreter"
+version = "0.1.0"
+dependencies = [
+ "amarok-diagnostics",
+ "amarok-syntax",
+]
 
 [[package]]
 name = "amarok-lexer"

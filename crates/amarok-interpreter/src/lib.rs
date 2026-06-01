@@ -83,9 +83,7 @@ fn evaluate_binary(
         BinaryOperator::Subtract => arithmetic(left, right, "subtract", |a, b| a - b),
         BinaryOperator::Multiply => arithmetic(left, right, "multiply", |a, b| a * b),
         BinaryOperator::Divide => match (left, right) {
-            (Value::Number(_), Value::Number(0.0)) => {
-                Err(runtime_error("division by zero"))
-            }
+            (Value::Number(_), Value::Number(0.0)) => Err(runtime_error("division by zero")),
             (Value::Number(a), Value::Number(b)) => Ok(Value::Number(a / b)),
             (left, right) => Err(runtime_error(format!(
                 "cannot divide a {} by a {}",

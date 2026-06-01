@@ -41,7 +41,11 @@ pub fn render(source: &str, diagnostic: &Diagnostic) -> String {
 
     // Walk up to the target, tracking which line we're on and where it started.
     let mut line_start = 0;
-    for (index, character) in characters.iter().enumerate().take(target.min(characters.len())) {
+    for (index, character) in characters
+        .iter()
+        .enumerate()
+        .take(target.min(characters.len()))
+    {
         if *character == '\n' {
             line_start = index + 1;
         }

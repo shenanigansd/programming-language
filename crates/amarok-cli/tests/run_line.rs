@@ -35,7 +35,7 @@ fn a_lex_error_renders_a_caret() {
 
 #[test]
 fn reports_a_parse_error() {
-    assert!(run_line("(1 + 2").contains("parse error"));
+    assert!(run_line("(1 + 2").contains("expected ')' after expression"));
 }
 
 #[test]

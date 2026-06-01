@@ -5,7 +5,7 @@ use amarok_parser::parse;
 
 /// Run one line of Amarok source and return the text to display: either the
 /// resulting value, or a description of whatever error stopped us.
-#[must_use]
+#[allow(clippy::must_use_candidate)]
 pub fn run_line(source: &str) -> String {
     if source.trim().is_empty() {
         return String::new();
@@ -22,7 +22,7 @@ pub fn run_line(source: &str) -> String {
 
     let expression = match parse(tokens) {
         Ok(expression) => expression,
-        Err(diagnostic) => return format!("parse error: {}", diagnostic.message),
+        Err(diagnostic) => return render(source, &diagnostic),
     };
 
     match evaluate(&expression) {

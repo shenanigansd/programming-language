@@ -1,17 +1,24 @@
-use amarok_lexer::{Token, tokenize};
+mod common;
+
+use amarok_lexer::{TokenKind, tokenize};
+use common::kinds;
 
 #[test]
 fn two_character_comparison_operators_produce_their_token() {
     let cases = [
-        (">=", Token::GreaterEqual),
-        ("<=", Token::LessEqual),
-        ("==", Token::EqualEqual),
-        ("!=", Token::BangEqual),
+        (">=", TokenKind::GreaterEqual),
+        ("<=", TokenKind::LessEqual),
+        ("==", TokenKind::EqualEqual),
+        ("!=", TokenKind::BangEqual),
     ];
     for (source, expected) in cases {
         let (actual, diagnostics) = tokenize(source);
-        let want = vec![expected, Token::EndOfFile];
-        assert_eq!(actual, want, "input {source:?} produced the wrong tokens");
+        let want = vec![expected, TokenKind::EndOfFile];
+        assert_eq!(
+            kinds(&actual),
+            want,
+            "input {source:?} produced the wrong tokens"
+        );
         assert!(diagnostics.is_empty());
     }
 }
@@ -19,15 +26,19 @@ fn two_character_comparison_operators_produce_their_token() {
 #[test]
 fn one_character_comparison_operators_alone() {
     let cases = [
-        (">", Token::Greater),
-        ("<", Token::Less),
-        ("=", Token::Equal),
-        ("!", Token::Bang),
+        (">", TokenKind::Greater),
+        ("<", TokenKind::Less),
+        ("=", TokenKind::Equal),
+        ("!", TokenKind::Bang),
     ];
     for (source, expected) in cases {
         let (actual, diagnostics) = tokenize(source);
-        let want = vec![expected, Token::EndOfFile];
-        assert_eq!(actual, want, "input {source:?} produced the wrong tokens");
+        let want = vec![expected, TokenKind::EndOfFile];
+        assert_eq!(
+            kinds(&actual),
+            want,
+            "input {source:?} produced the wrong tokens"
+        );
         assert!(diagnostics.is_empty());
     }
 }
@@ -38,8 +49,12 @@ fn greater_followed_by_non_equal_does_not_become_greater_equal() {
     // LeftParenthesis, not "swallow the paren as part of some > = thing."
     let (tokens, diagnostics) = tokenize(">(");
     assert_eq!(
-        tokens,
-        vec![Token::Greater, Token::LeftParenthesis, Token::EndOfFile],
+        kinds(&tokens),
+        vec![
+            TokenKind::Greater,
+            TokenKind::LeftParenthesis,
+            TokenKind::EndOfFile,
+        ],
     );
     assert!(diagnostics.is_empty());
 }

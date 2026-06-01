@@ -1,6 +1,6 @@
 pub use amarok_diagnostics::{Diagnostic, SourcePosition};
 
-use amarok_lexer::Token;
+use amarok_lexer::{Token, TokenKind};
 use amarok_syntax::{BinaryOperator, Expression, UnaryOperator};
 
 struct Parser {
@@ -16,7 +16,7 @@ impl Parser {
     fn advance(&mut self) -> Token {
         let token = self.tokens[self.current].clone();
         // Never step past the end-of-file sentinel; it's always the last token.
-        if !matches!(token, Token::EndOfFile) {
+        if !matches!(token.kind, TokenKind::EndOfFile) {
             self.current += 1;
         }
         token
@@ -25,8 +25,8 @@ impl Parser {
         &self.tokens[self.current]
     }
 
-    fn consume(&mut self, expected: &Token, message: &str) -> Result<(), Diagnostic> {
-        if self.peek() == expected {
+    fn consume(&mut self, expected: &TokenKind, message: &str) -> Result<(), Diagnostic> {
+        if &self.peek().kind == expected {
             self.advance();
             Ok(())
         } else {
@@ -62,9 +62,9 @@ impl Parser {
 
     fn parse_equality(&mut self) -> Result<Expression, Diagnostic> {
         self.parse_left_associative_binary(
-            |token| match token {
-                Token::EqualEqual => Some(BinaryOperator::Equal),
-                Token::BangEqual => Some(BinaryOperator::NotEqual),
+            |token| match token.kind {
+                TokenKind::EqualEqual => Some(BinaryOperator::Equal),
+                TokenKind::BangEqual => Some(BinaryOperator::NotEqual),
                 _ => None,
             },
             Self::parse_comparison,
@@ -73,11 +73,11 @@ impl Parser {
 
     fn parse_comparison(&mut self) -> Result<Expression, Diagnostic> {
         self.parse_left_associative_binary(
-            |token| match token {
-                Token::Less => Some(BinaryOperator::Less),
-                Token::LessEqual => Some(BinaryOperator::LessEqual),
-                Token::Greater => Some(BinaryOperator::Greater),
-                Token::GreaterEqual => Some(BinaryOperator::GreaterEqual),
+            |token| match token.kind {
+                TokenKind::Less => Some(BinaryOperator::Less),
+                TokenKind::LessEqual => Some(BinaryOperator::LessEqual),
+                TokenKind::Greater => Some(BinaryOperator::Greater),
+                TokenKind::GreaterEqual => Some(BinaryOperator::GreaterEqual),
                 _ => None,
             },
             Self::parse_term,
@@ -86,9 +86,9 @@ impl Parser {
 
     fn parse_term(&mut self) -> Result<Expression, Diagnostic> {
         self.parse_left_associative_binary(
-            |token| match token {
-                Token::Plus => Some(BinaryOperator::Add),
-                Token::Minus => Some(BinaryOperator::Subtract),
+            |token| match token.kind {
+                TokenKind::Plus => Some(BinaryOperator::Add),
+                TokenKind::Minus => Some(BinaryOperator::Subtract),
                 _ => None,
             },
             Self::parse_factor,
@@ -97,9 +97,9 @@ impl Parser {
 
     fn parse_factor(&mut self) -> Result<Expression, Diagnostic> {
         self.parse_left_associative_binary(
-            |token| match token {
-                Token::Star => Some(BinaryOperator::Multiply),
-                Token::Slash => Some(BinaryOperator::Divide),
+            |token| match token.kind {
+                TokenKind::Star => Some(BinaryOperator::Multiply),
+                TokenKind::Slash => Some(BinaryOperator::Divide),
                 _ => None,
             },
             Self::parse_unary,
@@ -107,9 +107,9 @@ impl Parser {
     }
 
     fn parse_unary(&mut self) -> Result<Expression, Diagnostic> {
-        let operator = match self.peek() {
-            Token::Minus => Some(UnaryOperator::Negate),
-            Token::Not => Some(UnaryOperator::Not),
+        let operator = match self.peek().kind {
+            TokenKind::Minus => Some(UnaryOperator::Negate),
+            TokenKind::Not => Some(UnaryOperator::Not),
             _ => None,
         };
         match operator {
@@ -126,15 +126,18 @@ impl Parser {
     }
 
     fn parse_primary(&mut self) -> Result<Expression, Diagnostic> {
-        match self.advance() {
-            Token::NumberLiteral(value) => Ok(Expression::NumberLiteral(value)),
-            Token::StringLiteral(value) => Ok(Expression::StringLiteral(value)),
-            Token::True => Ok(Expression::BooleanLiteral(true)),
-            Token::False => Ok(Expression::BooleanLiteral(false)),
-            Token::Nil => Ok(Expression::NilLiteral),
-            Token::LeftParenthesis => {
+        match self.advance().kind {
+            TokenKind::NumberLiteral(value) => Ok(Expression::NumberLiteral(value)),
+            TokenKind::StringLiteral(value) => Ok(Expression::StringLiteral(value)),
+            TokenKind::True => Ok(Expression::BooleanLiteral(true)),
+            TokenKind::False => Ok(Expression::BooleanLiteral(false)),
+            TokenKind::Nil => Ok(Expression::NilLiteral),
+            TokenKind::LeftParenthesis => {
                 let inner = self.parse_expression()?; // recurse to the TOP of the grammar
-                self.consume(&Token::RightParenthesis, "expected ')' after expression")?;
+                self.consume(
+                    &TokenKind::RightParenthesis,
+                    "expected ')' after expression",
+                )?;
                 Ok(inner)
             }
             unexpected => Err(Diagnostic::new(
@@ -154,6 +157,9 @@ impl Parser {
 pub fn parse(tokens: Vec<Token>) -> Result<Expression, Diagnostic> {
     let mut parser = Parser::new(tokens);
     let expression = parser.parse_expression()?;
-    parser.consume(&Token::EndOfFile, "expected end of input after expression")?;
+    parser.consume(
+        &TokenKind::EndOfFile,
+        "expected end of input after expression",
+    )?;
     Ok(expression)
 }

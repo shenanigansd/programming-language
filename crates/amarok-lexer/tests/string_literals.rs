@@ -1,11 +1,17 @@
-use amarok_lexer::{Token, tokenize};
+mod common;
+
+use amarok_lexer::{TokenKind, tokenize};
+use common::kinds;
 
 #[test]
 fn empty_string_literal() {
     let (tokens, diagnostics) = tokenize("\"\"");
     assert_eq!(
-        tokens,
-        vec![Token::StringLiteral(String::new()), Token::EndOfFile],
+        kinds(&tokens),
+        vec![
+            TokenKind::StringLiteral(String::new()),
+            TokenKind::EndOfFile
+        ],
     );
     assert!(diagnostics.is_empty());
 }
@@ -14,10 +20,10 @@ fn empty_string_literal() {
 fn simple_string_literal() {
     let (tokens, diagnostics) = tokenize("\"hello\"");
     assert_eq!(
-        tokens,
+        kinds(&tokens),
         vec![
-            Token::StringLiteral(String::from("hello")),
-            Token::EndOfFile,
+            TokenKind::StringLiteral(String::from("hello")),
+            TokenKind::EndOfFile,
         ],
     );
     assert!(diagnostics.is_empty());
@@ -27,10 +33,10 @@ fn simple_string_literal() {
 fn string_literal_with_spaces_inside() {
     let (tokens, diagnostics) = tokenize("\"hello world\"");
     assert_eq!(
-        tokens,
+        kinds(&tokens),
         vec![
-            Token::StringLiteral(String::from("hello world")),
-            Token::EndOfFile,
+            TokenKind::StringLiteral(String::from("hello world")),
+            TokenKind::EndOfFile,
         ],
     );
     assert!(diagnostics.is_empty());
@@ -40,10 +46,10 @@ fn string_literal_with_spaces_inside() {
 fn string_literal_can_span_multiple_lines() {
     let (tokens, diagnostics) = tokenize("\"line one\nline two\"");
     assert_eq!(
-        tokens,
+        kinds(&tokens),
         vec![
-            Token::StringLiteral(String::from("line one\nline two")),
-            Token::EndOfFile,
+            TokenKind::StringLiteral(String::from("line one\nline two")),
+            TokenKind::EndOfFile,
         ],
     );
     assert!(diagnostics.is_empty());
@@ -53,12 +59,12 @@ fn string_literal_can_span_multiple_lines() {
 fn string_literal_between_other_tokens() {
     let (tokens, diagnostics) = tokenize("(\"hello\")");
     assert_eq!(
-        tokens,
+        kinds(&tokens),
         vec![
-            Token::LeftParenthesis,
-            Token::StringLiteral(String::from("hello")),
-            Token::RightParenthesis,
-            Token::EndOfFile,
+            TokenKind::LeftParenthesis,
+            TokenKind::StringLiteral(String::from("hello")),
+            TokenKind::RightParenthesis,
+            TokenKind::EndOfFile,
         ],
     );
     assert!(diagnostics.is_empty());
@@ -68,10 +74,10 @@ fn string_literal_between_other_tokens() {
 fn unterminated_string_literal_records_a_diagnostic() {
     let (tokens, diagnostics) = tokenize("\"this string has no closing quote");
     assert_eq!(
-        tokens,
+        kinds(&tokens),
         vec![
-            Token::StringLiteral(String::from("this string has no closing quote")),
-            Token::EndOfFile,
+            TokenKind::StringLiteral(String::from("this string has no closing quote")),
+            TokenKind::EndOfFile,
         ],
     );
     assert_eq!(diagnostics.len(), 1);

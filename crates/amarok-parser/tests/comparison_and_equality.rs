@@ -1,15 +1,18 @@
-use amarok_lexer::Token;
+mod common;
+
+use amarok_lexer::TokenKind;
 use amarok_parser::parse;
 use amarok_syntax::{BinaryOperator, Expression};
+use common::token;
 
 #[test]
 fn equality_of_two_numbers() {
     // 1 == 2
     let tokens = vec![
-        Token::NumberLiteral(1.0),
-        Token::EqualEqual,
-        Token::NumberLiteral(2.0),
-        Token::EndOfFile,
+        token(TokenKind::NumberLiteral(1.0)),
+        token(TokenKind::EqualEqual),
+        token(TokenKind::NumberLiteral(2.0)),
+        token(TokenKind::EndOfFile),
     ];
     assert_eq!(
         parse(tokens),
@@ -25,12 +28,12 @@ fn equality_of_two_numbers() {
 fn comparison_binds_tighter_than_equality() {
     // 1 == 2 < 3  must parse as  1 == (2 < 3)
     let tokens = vec![
-        Token::NumberLiteral(1.0),
-        Token::EqualEqual,
-        Token::NumberLiteral(2.0),
-        Token::Less,
-        Token::NumberLiteral(3.0),
-        Token::EndOfFile,
+        token(TokenKind::NumberLiteral(1.0)),
+        token(TokenKind::EqualEqual),
+        token(TokenKind::NumberLiteral(2.0)),
+        token(TokenKind::Less),
+        token(TokenKind::NumberLiteral(3.0)),
+        token(TokenKind::EndOfFile),
     ];
     assert_eq!(
         parse(tokens),
@@ -50,14 +53,14 @@ fn comparison_binds_tighter_than_equality() {
 fn the_whole_ladder_in_one_expression() {
     // 1 == 2 + 3 * 4  must parse as  1 == (2 + (3 * 4))
     let tokens = vec![
-        Token::NumberLiteral(1.0),
-        Token::EqualEqual,
-        Token::NumberLiteral(2.0),
-        Token::Plus,
-        Token::NumberLiteral(3.0),
-        Token::Star,
-        Token::NumberLiteral(4.0),
-        Token::EndOfFile,
+        token(TokenKind::NumberLiteral(1.0)),
+        token(TokenKind::EqualEqual),
+        token(TokenKind::NumberLiteral(2.0)),
+        token(TokenKind::Plus),
+        token(TokenKind::NumberLiteral(3.0)),
+        token(TokenKind::Star),
+        token(TokenKind::NumberLiteral(4.0)),
+        token(TokenKind::EndOfFile),
     ];
     assert_eq!(
         parse(tokens),

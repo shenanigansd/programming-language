@@ -1,9 +1,15 @@
-use amarok_lexer::{Token, tokenize};
+mod common;
+
+use amarok_lexer::{TokenKind, tokenize};
+use common::kinds;
 
 #[test]
 fn single_digit_integer() {
     let (tokens, diagnostics) = tokenize("5");
-    assert_eq!(tokens, vec![Token::NumberLiteral(5.0), Token::EndOfFile],);
+    assert_eq!(
+        kinds(&tokens),
+        vec![TokenKind::NumberLiteral(5.0), TokenKind::EndOfFile],
+    );
     assert!(diagnostics.is_empty());
 }
 
@@ -11,8 +17,8 @@ fn single_digit_integer() {
 fn multi_digit_integer() {
     let (tokens, diagnostics) = tokenize("12345");
     assert_eq!(
-        tokens,
-        vec![Token::NumberLiteral(12345.0), Token::EndOfFile],
+        kinds(&tokens),
+        vec![TokenKind::NumberLiteral(12345.0), TokenKind::EndOfFile],
     );
     assert!(diagnostics.is_empty());
 }
@@ -20,14 +26,20 @@ fn multi_digit_integer() {
 #[test]
 fn zero_on_its_own() {
     let (tokens, diagnostics) = tokenize("0");
-    assert_eq!(tokens, vec![Token::NumberLiteral(0.0), Token::EndOfFile],);
+    assert_eq!(
+        kinds(&tokens),
+        vec![TokenKind::NumberLiteral(0.0), TokenKind::EndOfFile],
+    );
     assert!(diagnostics.is_empty());
 }
 
 #[test]
 fn decimal_number() {
     let (tokens, diagnostics) = tokenize("3.14");
-    assert_eq!(tokens, vec![Token::NumberLiteral(3.14), Token::EndOfFile],);
+    assert_eq!(
+        kinds(&tokens),
+        vec![TokenKind::NumberLiteral(3.14), TokenKind::EndOfFile],
+    );
     assert!(diagnostics.is_empty());
 }
 
@@ -35,8 +47,12 @@ fn decimal_number() {
 fn integer_followed_by_dot_with_nothing_after_is_two_tokens() {
     let (tokens, diagnostics) = tokenize("123.");
     assert_eq!(
-        tokens,
-        vec![Token::NumberLiteral(123.0), Token::Dot, Token::EndOfFile,],
+        kinds(&tokens),
+        vec![
+            TokenKind::NumberLiteral(123.0),
+            TokenKind::Dot,
+            TokenKind::EndOfFile,
+        ],
     );
     assert!(diagnostics.is_empty());
 }
@@ -45,8 +61,12 @@ fn integer_followed_by_dot_with_nothing_after_is_two_tokens() {
 fn dot_followed_by_digits_is_two_tokens() {
     let (tokens, diagnostics) = tokenize(".5");
     assert_eq!(
-        tokens,
-        vec![Token::Dot, Token::NumberLiteral(5.0), Token::EndOfFile,],
+        kinds(&tokens),
+        vec![
+            TokenKind::Dot,
+            TokenKind::NumberLiteral(5.0),
+            TokenKind::EndOfFile,
+        ],
     );
     assert!(diagnostics.is_empty());
 }
@@ -55,14 +75,14 @@ fn dot_followed_by_digits_is_two_tokens() {
 fn number_inside_a_parenthesized_addition() {
     let (tokens, diagnostics) = tokenize("(1 + 2.5)");
     assert_eq!(
-        tokens,
+        kinds(&tokens),
         vec![
-            Token::LeftParenthesis,
-            Token::NumberLiteral(1.0),
-            Token::Plus,
-            Token::NumberLiteral(2.5),
-            Token::RightParenthesis,
-            Token::EndOfFile,
+            TokenKind::LeftParenthesis,
+            TokenKind::NumberLiteral(1.0),
+            TokenKind::Plus,
+            TokenKind::NumberLiteral(2.5),
+            TokenKind::RightParenthesis,
+            TokenKind::EndOfFile,
         ],
     );
     assert!(diagnostics.is_empty());

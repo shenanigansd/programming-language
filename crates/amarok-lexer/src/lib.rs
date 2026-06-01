@@ -1,7 +1,8 @@
 pub use amarok_diagnostics::{Diagnostic, SourcePosition};
 
+/// The lexical category of a token, plus any payload it carries.
 #[derive(Debug, PartialEq, Clone)]
-pub enum Token {
+pub enum TokenKind {
     LeftParenthesis,
     RightParenthesis,
     LeftBrace,
@@ -38,6 +39,13 @@ pub enum Token {
     False,
     Nil,
     EndOfFile,
+}
+
+/// A token: its kind, plus where in the source it began.
+#[derive(Debug, PartialEq, Clone)]
+pub struct Token {
+    pub kind: TokenKind,
+    pub position: SourcePosition,
 }
 
 struct Lexer {
@@ -92,42 +100,42 @@ impl Lexer {
             };
             let character = self.advance();
             let token = match character {
-                '(' => Token::LeftParenthesis,
-                ')' => Token::RightParenthesis,
-                '{' => Token::LeftBrace,
-                '}' => Token::RightBrace,
-                ',' => Token::Comma,
-                '.' => Token::Dot,
-                '-' => Token::Minus,
-                '+' => Token::Plus,
-                ';' => Token::Semicolon,
-                '*' => Token::Star,
+                '(' => TokenKind::LeftParenthesis,
+                ')' => TokenKind::RightParenthesis,
+                '{' => TokenKind::LeftBrace,
+                '}' => TokenKind::RightBrace,
+                ',' => TokenKind::Comma,
+                '.' => TokenKind::Dot,
+                '-' => TokenKind::Minus,
+                '+' => TokenKind::Plus,
+                ';' => TokenKind::Semicolon,
+                '*' => TokenKind::Star,
                 '!' => {
                     if self.match_next('=') {
-                        Token::BangEqual
+                        TokenKind::BangEqual
                     } else {
-                        Token::Bang
+                        TokenKind::Bang
                     }
                 }
                 '=' => {
                     if self.match_next('=') {
-                        Token::EqualEqual
+                        TokenKind::EqualEqual
                     } else {
-                        Token::Equal
+                        TokenKind::Equal
                     }
                 }
                 '<' => {
                     if self.match_next('=') {
-                        Token::LessEqual
+                        TokenKind::LessEqual
                     } else {
-                        Token::Less
+                        TokenKind::Less
                     }
                 }
                 '>' => {
                     if self.match_next('=') {
-                        Token::GreaterEqual
+                        TokenKind::GreaterEqual
                     } else {
-                        Token::Greater
+                        TokenKind::Greater
                     }
                 }
                 '/' => {
@@ -140,7 +148,7 @@ impl Lexer {
                         }
                         continue;
                     }
-                    Token::Slash
+                    TokenKind::Slash
                 }
                 '"' => {
                     let mut content = String::new();
@@ -165,7 +173,7 @@ impl Lexer {
                             }
                         }
                     }
-                    Token::StringLiteral(content)
+                    TokenKind::StringLiteral(content)
                 }
                 digit @ '0'..='9' => {
                     let mut number_text = String::from(digit);
@@ -181,7 +189,7 @@ impl Lexer {
                     let value: f64 = number_text.parse().expect(
                         "number_text contains only digits and at most one dot — must parse",
                     );
-                    Token::NumberLiteral(value)
+                    TokenKind::NumberLiteral(value)
                 }
                 first @ ('a'..='z' | 'A'..='Z' | '_') => {
                     let mut text = String::from(first);
@@ -192,20 +200,20 @@ impl Lexer {
                         text.push(self.advance());
                     }
                     match text.as_str() {
-                        "and" => Token::And,
-                        "or" => Token::Or,
-                        "not" => Token::Not,
-                        "if" => Token::If,
-                        "else" => Token::Else,
-                        "while" => Token::While,
-                        "for" => Token::For,
-                        "let" => Token::Let,
-                        "fun" => Token::Fun,
-                        "return" => Token::Return,
-                        "true" => Token::True,
-                        "false" => Token::False,
-                        "nil" => Token::Nil,
-                        _ => Token::Identifier(text),
+                        "and" => TokenKind::And,
+                        "or" => TokenKind::Or,
+                        "not" => TokenKind::Not,
+                        "if" => TokenKind::If,
+                        "else" => TokenKind::Else,
+                        "while" => TokenKind::While,
+                        "for" => TokenKind::For,
+                        "let" => TokenKind::Let,
+                        "fun" => TokenKind::Fun,
+                        "return" => TokenKind::Return,
+                        "true" => TokenKind::True,
+                        "false" => TokenKind::False,
+                        "nil" => TokenKind::Nil,
+                        _ => TokenKind::Identifier(text),
                     }
                 }
                 ' ' | '\t' | '\r' | '\n' => continue,
@@ -218,9 +226,17 @@ impl Lexer {
                     continue;
                 }
             };
-            tokens.push(token);
+            tokens.push(Token {
+                kind: token,
+                position: start_position,
+            });
         }
-        tokens.push(Token::EndOfFile);
+        tokens.push(Token {
+            kind: TokenKind::EndOfFile,
+            position: SourcePosition {
+                character_index: self.current,
+            },
+        });
         (tokens, diagnostics)
     }
 }

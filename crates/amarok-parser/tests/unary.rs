@@ -1,11 +1,18 @@
-use amarok_lexer::Token;
+mod common;
+
+use amarok_lexer::TokenKind;
 use amarok_parser::parse;
 use amarok_syntax::{Expression, UnaryOperator};
+use common::token;
 
 #[test]
 fn negation_of_a_number() {
     // -5
-    let tokens = vec![Token::Minus, Token::NumberLiteral(5.0), Token::EndOfFile];
+    let tokens = vec![
+        token(TokenKind::Minus),
+        token(TokenKind::NumberLiteral(5.0)),
+        token(TokenKind::EndOfFile),
+    ];
     assert_eq!(
         parse(tokens),
         Ok(Expression::Unary {
@@ -18,7 +25,11 @@ fn negation_of_a_number() {
 #[test]
 fn logical_not_of_a_boolean() {
     // not true
-    let tokens = vec![Token::Not, Token::True, Token::EndOfFile];
+    let tokens = vec![
+        token(TokenKind::Not),
+        token(TokenKind::True),
+        token(TokenKind::EndOfFile),
+    ];
     assert_eq!(
         parse(tokens),
         Ok(Expression::Unary {
@@ -32,10 +43,10 @@ fn logical_not_of_a_boolean() {
 fn doubly_nested_negation() {
     // - - 5  (negate the negation of five)
     let tokens = vec![
-        Token::Minus,
-        Token::Minus,
-        Token::NumberLiteral(5.0),
-        Token::EndOfFile,
+        token(TokenKind::Minus),
+        token(TokenKind::Minus),
+        token(TokenKind::NumberLiteral(5.0)),
+        token(TokenKind::EndOfFile),
     ];
     assert_eq!(
         parse(tokens),
@@ -52,6 +63,9 @@ fn doubly_nested_negation() {
 #[test]
 fn a_bare_literal_still_parses_with_no_unary_operator() {
     // 42 — no operator, so parse_unary falls through to parse_primary.
-    let tokens = vec![Token::NumberLiteral(42.0), Token::EndOfFile];
+    let tokens = vec![
+        token(TokenKind::NumberLiteral(42.0)),
+        token(TokenKind::EndOfFile),
+    ];
     assert_eq!(parse(tokens), Ok(Expression::NumberLiteral(42.0)));
 }

@@ -1,15 +1,18 @@
-use amarok_lexer::Token;
+mod common;
+
+use amarok_lexer::TokenKind;
 use amarok_parser::parse;
 use amarok_syntax::{BinaryOperator, Expression};
+use common::token;
 
 #[test]
 fn parentheses_around_a_literal_yield_the_literal() {
     // (42)
     let tokens = vec![
-        Token::LeftParenthesis,
-        Token::NumberLiteral(42.0),
-        Token::RightParenthesis,
-        Token::EndOfFile,
+        token(TokenKind::LeftParenthesis),
+        token(TokenKind::NumberLiteral(42.0)),
+        token(TokenKind::RightParenthesis),
+        token(TokenKind::EndOfFile),
     ];
     assert_eq!(parse(tokens), Ok(Expression::NumberLiteral(42.0)));
 }
@@ -18,14 +21,14 @@ fn parentheses_around_a_literal_yield_the_literal() {
 fn parentheses_override_precedence() {
     // (1 + 2) * 3  must parse as  (1 + 2) * 3, NOT 1 + (2 * 3)
     let tokens = vec![
-        Token::LeftParenthesis,
-        Token::NumberLiteral(1.0),
-        Token::Plus,
-        Token::NumberLiteral(2.0),
-        Token::RightParenthesis,
-        Token::Star,
-        Token::NumberLiteral(3.0),
-        Token::EndOfFile,
+        token(TokenKind::LeftParenthesis),
+        token(TokenKind::NumberLiteral(1.0)),
+        token(TokenKind::Plus),
+        token(TokenKind::NumberLiteral(2.0)),
+        token(TokenKind::RightParenthesis),
+        token(TokenKind::Star),
+        token(TokenKind::NumberLiteral(3.0)),
+        token(TokenKind::EndOfFile),
     ];
     assert_eq!(
         parse(tokens),
@@ -45,12 +48,12 @@ fn parentheses_override_precedence() {
 fn nested_parentheses_collapse_to_the_inner_expression() {
     // ((42))
     let tokens = vec![
-        Token::LeftParenthesis,
-        Token::LeftParenthesis,
-        Token::NumberLiteral(42.0),
-        Token::RightParenthesis,
-        Token::RightParenthesis,
-        Token::EndOfFile,
+        token(TokenKind::LeftParenthesis),
+        token(TokenKind::LeftParenthesis),
+        token(TokenKind::NumberLiteral(42.0)),
+        token(TokenKind::RightParenthesis),
+        token(TokenKind::RightParenthesis),
+        token(TokenKind::EndOfFile),
     ];
     assert_eq!(parse(tokens), Ok(Expression::NumberLiteral(42.0)));
 }
@@ -59,11 +62,11 @@ fn nested_parentheses_collapse_to_the_inner_expression() {
 fn a_missing_closing_parenthesis_is_an_error() {
     // (1 + 2   — never closed
     let tokens = vec![
-        Token::LeftParenthesis,
-        Token::NumberLiteral(1.0),
-        Token::Plus,
-        Token::NumberLiteral(2.0),
-        Token::EndOfFile,
+        token(TokenKind::LeftParenthesis),
+        token(TokenKind::NumberLiteral(1.0)),
+        token(TokenKind::Plus),
+        token(TokenKind::NumberLiteral(2.0)),
+        token(TokenKind::EndOfFile),
     ];
     let result = parse(tokens);
     assert!(result.is_err());

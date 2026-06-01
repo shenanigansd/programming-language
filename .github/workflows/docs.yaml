@@ -43,7 +43,7 @@ jobs:
           persist-credentials: false
 
       - name: Build internal docs
-        run: uvx zensical build --config-file ./docs/internal/zensical.toml --strict --clean
+        run: pipx run zensical build --config-file ./docs/internal/zensical.toml --strict --clean
 
       - name: Rename site directory
         run: mv ./docs/internal/site ./docs/internal/internal

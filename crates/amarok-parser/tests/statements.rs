@@ -1,9 +1,9 @@
 use amarok_lexer::TokenKind;
 use amarok_parser::parse_program;
-use amarok_syntax::{BinaryOperator, Expression, Statement};
+use amarok_syntax::{BinaryOperator, ExpressionKind, Statement};
 
 mod common;
-use common::token;
+use common::{expression, token};
 
 #[test]
 fn a_let_declaration() {
@@ -20,7 +20,7 @@ fn a_let_declaration() {
         parse_program(tokens),
         Ok(vec![Statement::Let {
             name: String::from("x"),
-            initializer: Expression::NumberLiteral(5.0),
+            initializer: expression(ExpressionKind::NumberLiteral(5.0)),
         }]),
     );
 }
@@ -37,11 +37,13 @@ fn an_expression_statement() {
     ];
     assert_eq!(
         parse_program(tokens),
-        Ok(vec![Statement::Expression(Expression::Binary {
-            left: Box::new(Expression::NumberLiteral(1.0)),
-            operator: BinaryOperator::Add,
-            right: Box::new(Expression::NumberLiteral(2.0)),
-        })]),
+        Ok(vec![Statement::Expression(expression(
+            ExpressionKind::Binary {
+                left: Box::new(expression(ExpressionKind::NumberLiteral(1.0))),
+                operator: BinaryOperator::Add,
+                right: Box::new(expression(ExpressionKind::NumberLiteral(2.0))),
+            }
+        ))]),
     );
 }
 
@@ -63,9 +65,9 @@ fn several_statements_in_sequence() {
         Ok(vec![
             Statement::Let {
                 name: String::from("x"),
-                initializer: Expression::NumberLiteral(5.0),
+                initializer: expression(ExpressionKind::NumberLiteral(5.0)),
             },
-            Statement::Expression(Expression::Variable(String::from("x"))),
+            Statement::Expression(expression(ExpressionKind::Variable(String::from("x")))),
         ]),
     );
 }

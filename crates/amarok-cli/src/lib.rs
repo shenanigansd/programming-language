@@ -29,7 +29,7 @@ pub fn run_source(source: &str) -> String {
             Ok(Some(value)) => output.push(value.to_string()),
             Ok(None) => {}
             Err(diagnostic) => {
-                output.push(format!("runtime error: {}", diagnostic.message));
+                output.push(render(source, &diagnostic));
                 break; // stop at the first runtime error
             }
         }

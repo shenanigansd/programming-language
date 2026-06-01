@@ -21,16 +21,36 @@ fn a_let_declaration_alone_produces_no_output() {
 }
 
 #[test]
-fn an_undefined_variable_is_a_runtime_error() {
-    assert!(run_source("y;").contains("runtime error"));
+fn an_undefined_variable_renders_a_caret() {
+    let output = run_source("missing;");
+    assert!(output.contains('^'));
+    assert!(output.contains("undefined variable"));
+}
+
+#[test]
+fn a_type_mismatch_renders_a_caret_at_the_operator() {
+    // 1 + "a"  — the '+' sits at column 2, so the caret should land there, the
+    // same visual format as a lex or parse error.
+    let output = run_source("1 + \"a\";");
+    let caret_line = output
+        .lines()
+        .nth(1)
+        .expect("a caret line below the source");
+    assert_eq!(caret_line.find('^'), Some(2));
+}
+
+#[test]
+fn division_by_zero_renders_a_caret() {
+    let output = run_source("5 / 0;");
+    assert!(output.contains('^'));
 }
 
 #[test]
 fn a_parse_error_renders_a_caret() {
-    assert!(run_source("let x = 5").contains("^")); // missing semicolon
+    assert!(run_source("let x = 5").contains('^')); // missing semicolon
 }
 
 #[test]
 fn a_lex_error_renders_a_caret() {
-    assert!(run_source("@;").contains("^"));
+    assert!(run_source("@;").contains('^'));
 }

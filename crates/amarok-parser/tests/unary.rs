@@ -2,8 +2,8 @@ mod common;
 
 use amarok_lexer::TokenKind;
 use amarok_parser::parse;
-use amarok_syntax::{Expression, UnaryOperator};
-use common::token;
+use amarok_syntax::{ExpressionKind, UnaryOperator};
+use common::{expression, token};
 
 #[test]
 fn negation_of_a_number() {
@@ -15,10 +15,10 @@ fn negation_of_a_number() {
     ];
     assert_eq!(
         parse(tokens),
-        Ok(Expression::Unary {
+        Ok(expression(ExpressionKind::Unary {
             operator: UnaryOperator::Negate,
-            operand: Box::new(Expression::NumberLiteral(5.0)),
-        }),
+            operand: Box::new(expression(ExpressionKind::NumberLiteral(5.0))),
+        })),
     );
 }
 
@@ -32,10 +32,10 @@ fn logical_not_of_a_boolean() {
     ];
     assert_eq!(
         parse(tokens),
-        Ok(Expression::Unary {
+        Ok(expression(ExpressionKind::Unary {
             operator: UnaryOperator::Not,
-            operand: Box::new(Expression::BooleanLiteral(true)),
-        }),
+            operand: Box::new(expression(ExpressionKind::BooleanLiteral(true))),
+        })),
     );
 }
 
@@ -50,13 +50,13 @@ fn doubly_nested_negation() {
     ];
     assert_eq!(
         parse(tokens),
-        Ok(Expression::Unary {
+        Ok(expression(ExpressionKind::Unary {
             operator: UnaryOperator::Negate,
-            operand: Box::new(Expression::Unary {
+            operand: Box::new(expression(ExpressionKind::Unary {
                 operator: UnaryOperator::Negate,
-                operand: Box::new(Expression::NumberLiteral(5.0)),
-            }),
-        }),
+                operand: Box::new(expression(ExpressionKind::NumberLiteral(5.0))),
+            })),
+        })),
     );
 }
 
@@ -67,5 +67,8 @@ fn a_bare_literal_still_parses_with_no_unary_operator() {
         token(TokenKind::NumberLiteral(42.0)),
         token(TokenKind::EndOfFile),
     ];
-    assert_eq!(parse(tokens), Ok(Expression::NumberLiteral(42.0)));
+    assert_eq!(
+        parse(tokens),
+        Ok(expression(ExpressionKind::NumberLiteral(42.0))),
+    );
 }

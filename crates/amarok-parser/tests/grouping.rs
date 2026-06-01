@@ -2,8 +2,8 @@ mod common;
 
 use amarok_lexer::TokenKind;
 use amarok_parser::parse;
-use amarok_syntax::{BinaryOperator, Expression};
-use common::token;
+use amarok_syntax::{BinaryOperator, ExpressionKind};
+use common::{expression, token};
 
 #[test]
 fn parentheses_around_a_literal_yield_the_literal() {
@@ -14,7 +14,10 @@ fn parentheses_around_a_literal_yield_the_literal() {
         token(TokenKind::RightParenthesis),
         token(TokenKind::EndOfFile),
     ];
-    assert_eq!(parse(tokens), Ok(Expression::NumberLiteral(42.0)));
+    assert_eq!(
+        parse(tokens),
+        Ok(expression(ExpressionKind::NumberLiteral(42.0))),
+    );
 }
 
 #[test]
@@ -32,15 +35,15 @@ fn parentheses_override_precedence() {
     ];
     assert_eq!(
         parse(tokens),
-        Ok(Expression::Binary {
-            left: Box::new(Expression::Binary {
-                left: Box::new(Expression::NumberLiteral(1.0)),
+        Ok(expression(ExpressionKind::Binary {
+            left: Box::new(expression(ExpressionKind::Binary {
+                left: Box::new(expression(ExpressionKind::NumberLiteral(1.0))),
                 operator: BinaryOperator::Add,
-                right: Box::new(Expression::NumberLiteral(2.0)),
-            }),
+                right: Box::new(expression(ExpressionKind::NumberLiteral(2.0))),
+            })),
             operator: BinaryOperator::Multiply,
-            right: Box::new(Expression::NumberLiteral(3.0)),
-        }),
+            right: Box::new(expression(ExpressionKind::NumberLiteral(3.0))),
+        })),
     );
 }
 
@@ -55,7 +58,10 @@ fn nested_parentheses_collapse_to_the_inner_expression() {
         token(TokenKind::RightParenthesis),
         token(TokenKind::EndOfFile),
     ];
-    assert_eq!(parse(tokens), Ok(Expression::NumberLiteral(42.0)));
+    assert_eq!(
+        parse(tokens),
+        Ok(expression(ExpressionKind::NumberLiteral(42.0))),
+    );
 }
 
 #[test]
@@ -70,5 +76,5 @@ fn a_missing_closing_parenthesis_is_an_error() {
     ];
     let result = parse(tokens);
     assert!(result.is_err());
-    assert!(result.unwrap_err().message.contains(")"));
+    assert!(result.unwrap_err().message.contains(')'));
 }

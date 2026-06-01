@@ -1,3 +1,4 @@
+use amarok_diagnostics::render;
 use amarok_interpreter::evaluate;
 use amarok_lexer::tokenize;
 use amarok_parser::parse;
@@ -14,7 +15,7 @@ pub fn run_line(source: &str) -> String {
     if !lex_diagnostics.is_empty() {
         return lex_diagnostics
             .iter()
-            .map(|diagnostic| format!("lex error: {}", diagnostic.message))
+            .map(|diagnostic| render(source, diagnostic))
             .collect::<Vec<_>>()
             .join("\n");
     }

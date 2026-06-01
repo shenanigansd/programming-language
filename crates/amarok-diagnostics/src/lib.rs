@@ -28,3 +28,35 @@ impl Diagnostic {
         }
     }
 }
+
+/// Render a diagnostic against its source as a two-line display: the offending
+/// line of source, then a caret pointing at the column, followed by the message.
+///
+/// Assumes one character is one column wide — tabs and wide characters aren't
+/// handled yet, which is fine for now.
+#[allow(clippy::must_use_candidate)]
+pub fn render(source: &str, diagnostic: &Diagnostic) -> String {
+    let characters: Vec<char> = source.chars().collect();
+    let target = diagnostic.position.character_index;
+
+    // Walk up to the target, tracking which line we're on and where it started.
+    let mut line_start = 0;
+    for (index, character) in characters.iter().enumerate().take(target.min(characters.len())) {
+        if *character == '\n' {
+            line_start = index + 1;
+        }
+    }
+
+    // Column within the line, and the text of that line up to its newline.
+    let column = target.saturating_sub(line_start);
+    let line_text: String = characters[line_start..]
+        .iter()
+        .take_while(|&&character| character != '\n')
+        .collect();
+
+    let indent = " ".repeat(column);
+    format!(
+        "{line_text}\n{indent}^ {message}",
+        message = diagnostic.message
+    )
+}

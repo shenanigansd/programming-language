@@ -26,8 +26,11 @@ fn a_blank_line_produces_no_output() {
 }
 
 #[test]
-fn reports_a_lex_error() {
-    assert!(run_line("@").contains("lex error"));
+fn a_lex_error_renders_a_caret() {
+    let output = run_line("1 @ 2");
+    assert!(output.contains("1 @ 2"));
+    assert!(output.contains("^"));
+    assert!(output.contains("unexpected character"));
 }
 
 #[test]

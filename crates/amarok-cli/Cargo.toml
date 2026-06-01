@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+amarok-diagnostics = { path = "../amarok-diagnostics" }
 amarok-lexer = { path = "../amarok-lexer" }
 amarok-parser = { path = "../amarok-parser" }
 amarok-interpreter = { path = "../amarok-interpreter" }

@@ -6,6 +6,7 @@ version = 4
 name = "amarok-cli"
 version = "0.1.0"
 dependencies = [
+ "amarok-diagnostics",
  "amarok-interpreter",
  "amarok-lexer",
  "amarok-parser",
